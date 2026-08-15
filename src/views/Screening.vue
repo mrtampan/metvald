@@ -453,21 +453,6 @@ watch(
           </div>
         </div>
       </div>
-
-      <!-- BubbleMaps Data Card -->
-      <div
-        v-if="submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm"
-      >
-        <h2 class="text-xl font-bold text-gray-900 mb-4">BubbleMaps Data</h2>
-        <div class="rounded-xl overflow-hidden border border-gray-200">
-          <iframe
-            :src="`https://v2.bubblemaps.io/map?address=${submittedAddress}&chain=solana`"
-            style="width: 100%; height: 650px; border: none"
-            allowFullScreen
-          ></iframe>
-        </div>
-      </div>
     </div>
   </div>
 </template>
