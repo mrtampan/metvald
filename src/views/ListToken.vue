@@ -145,6 +145,14 @@ const fetchTokenList = async () => {
       filterConditions.push("base_token_has_high_single_ownership=false");
     }
 
+    if (filters.value.newListing) {
+      filterConditions.push("base_token_is_new_listing=false");
+    }
+
+    if (filters.value.noHighSupplyConcentration) {
+      filterConditions.push("base_token_has_high_supply_concentration=false");
+    }
+
     filterConditions.push("pool_type=dlmm");
 
     if (filters.value.minMarketCap > 0) {
@@ -181,6 +189,16 @@ const fetchTokenList = async () => {
       );
       filterConditions.push(
         `quote_token_organic_score>=${filters.value.minOrganicScore}`,
+      );
+    }
+
+    if (filters.value.minTvl > 0) {
+      filterConditions.push(`tvl>=${filters.value.minTvl}`);
+    }
+
+    if (filters.value.minFeeActiveTvlRatio) {
+      filterConditions.push(
+        `fee_active_tvl_ratio>=${filters.value.minFeeActiveTvlRatio}`,
       );
     }
 
@@ -463,6 +481,19 @@ onMounted(() => {
             />
           </div>
 
+          <!-- Min TVL -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">
+              Min TVL ($)
+            </label>
+            <input
+              v-model.number="filters.minTvl"
+              type="number"
+              placeholder=""
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+            />
+          </div>
+
           <!-- Min Active TVL -->
           <div>
             <label class="block text-xs font-semibold text-gray-600 mb-1">
@@ -476,6 +507,23 @@ onMounted(() => {
             />
           </div>
 
+          <!--Fee/Active TVL -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">
+              Min Fee/Active TVL %
+            </label>
+            <input
+              v-model.number="filters.minFeeActiveTvlRatio"
+              type="number"
+              placeholder=""
+              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+            />
+          </div>
+        </div>
+
+        <div
+          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4"
+        >
           <!-- No High Single Ownership Checkbox -->
           <div class="flex items-center pt-5">
             <label
@@ -488,6 +536,36 @@ onMounted(() => {
               />
               <span class="text-xs font-semibold text-gray-700">
                 No High Single Ownership
+              </span>
+            </label>
+          </div>
+
+          <div class="flex items-center pt-5">
+            <label
+              class="relative flex items-center gap-2 cursor-pointer select-none"
+            >
+              <input
+                v-model="filters.newListing"
+                type="checkbox"
+                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+              />
+              <span class="text-xs font-semibold text-gray-700">
+                New Listing
+              </span>
+            </label>
+          </div>
+
+          <div class="flex items-center pt-5">
+            <label
+              class="relative flex items-center gap-2 cursor-pointer select-none"
+            >
+              <input
+                v-model="filters.noHighSupplyConcentration"
+                type="checkbox"
+                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+              />
+              <span class="text-xs font-semibold text-gray-700">
+                No High Supply Concentration
               </span>
             </label>
           </div>
