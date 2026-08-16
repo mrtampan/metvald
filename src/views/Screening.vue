@@ -13,6 +13,12 @@ const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const submittedAddress = ref("");
+const holdersData = ref([]);
+const totalHoldersCount = ref(0);
+const top10Percentage = ref(0);
+
+const bundledWalletsCount = ref(0);
+const bundledSupplyPct = ref(0);
 
 const fetchScreeningData = async () => {
   const address = token.value.trim();
@@ -28,6 +34,9 @@ const fetchScreeningData = async () => {
   tokenMeta.value = null;
   riskDetails.value = null;
   dexscreenerData.value = null;
+  holdersData.value = [];
+  totalHoldersCount.value = 0;
+  top10Percentage.value = 0;
   submittedAddress.value = address;
 
   try {
@@ -57,6 +66,50 @@ const fetchScreeningData = async () => {
       score: data.score || 0,
     };
 
+    // Simple Holders Data Population
+    holdersData.value = (data.topHolders || []).map((item, idx) => ({
+      owner: item.owner || item.address,
+      uiAmount: item.uiAmount || item.amount || 0,
+      pct: item.pct || 0,
+      rank: idx + 1,
+      insider: Boolean(item.insider),
+    }));
+
+    totalHoldersCount.value = data.totalHolders;
+
+    if (holdersData.value.length > 0) {
+      const top10Sum = holdersData.value
+        .slice(0, 10)
+        .reduce((acc, h) => acc + (h.pct || 0), 0);
+      top10Percentage.value = Number(top10Sum.toFixed(2));
+    }
+
+    // Extract Bundler & Insider Networks Data
+    let rawBundledCount = Number(data.graphInsidersDetected) || 0;
+
+    const ownerCountsMap = {};
+    holdersData.value.forEach((h) => {
+      if (h.owner) {
+        ownerCountsMap[h.owner] = (ownerCountsMap[h.owner] || 0) + 1;
+      }
+    });
+
+    const bundledHolders = holdersData.value.filter(
+      (h) =>
+        h.insider || (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
+    );
+
+    const rawBundledSupply = bundledHolders.reduce(
+      (acc, h) => acc + (h.pct || 0),
+      0,
+    );
+
+    bundledWalletsCount.value = Math.max(
+      rawBundledCount,
+      bundledHolders.length,
+    );
+    bundledSupplyPct.value = Number(rawBundledSupply.toFixed(2));
+
     try {
       const dexResponse = await fetch(
         `https://api.dexscreener.com/latest/dex/tokens/${address}`,
@@ -85,6 +138,9 @@ const fetchScreeningData = async () => {
     tokenMeta.value = null;
     riskDetails.value = null;
     dexscreenerData.value = null;
+    holdersData.value = [];
+    totalHoldersCount.value = 0;
+    top10Percentage.value = 0;
     submittedAddress.value = "";
   } finally {
     isLoading.value = false;
@@ -110,6 +166,32 @@ const getRiskLevel = (score) => {
   return {
     level: "HIGH RISK",
     color: "bg-red-100 text-red-800 border-red-300",
+  };
+};
+
+const getRiskBundleLevel = (count) => {
+  if (count > 2000)
+    return {
+      level: "HIGH RISK",
+      color: "text-red-600",
+      cardColor: "bg-red-50 border-red-200",
+      badgeColor: "bg-red-100 text-red-800 border-red-300",
+      labelColor: "text-red-700",
+    };
+  if (count >= 700)
+    return {
+      level: "WARN",
+      color: "text-amber-600",
+      cardColor: "bg-amber-50 border-amber-200",
+      badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
+      labelColor: "text-amber-700",
+    };
+  return {
+    level: "GOOD",
+    color: "text-emerald-600",
+    cardColor: "bg-emerald-50 border-emerald-200",
+    badgeColor: "bg-green-100 text-green-800 border-green-300",
+    labelColor: "text-emerald-700",
   };
 };
 
@@ -450,6 +532,96 @@ watch(
             >
               ✓ No risks detected
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Extend Analytics Card (Placed above Token Holders) -->
+      <div
+        v-if="submittedAddress"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
+      >
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <svg
+            class="w-5 h-5 text-blue-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+            />
+          </svg>
+          Holder Analytics
+        </h2>
+
+        <!-- Metrics Grid (Count Bundled, Top 10 Supply Share, Total Holders) -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <!-- Count Bundled -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              getRiskBundleLevel(bundledWalletsCount).cardColor,
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                getRiskBundleLevel(bundledWalletsCount).labelColor,
+              ]"
+            >
+              Total Bundlers
+            </p>
+            <div class="flex items-center justify-between mt-0.5">
+              <p
+                :class="[
+                  'text-base font-bold',
+                  getRiskBundleLevel(bundledWalletsCount).color,
+                ]"
+              >
+                {{ bundledWalletsCount }}
+              </p>
+            </div>
+          </div>
+
+          <!-- Top 10 Supply Share -->
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <p
+              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Top 10 Supply Share
+            </p>
+            <p
+              :class="[
+                'text-base font-bold mt-0.5',
+                top10Percentage > 60
+                  ? 'text-red-600'
+                  : top10Percentage > 30
+                    ? 'text-amber-600'
+                    : 'text-emerald-600',
+              ]"
+            >
+              {{ top10Percentage }}%
+            </p>
+          </div>
+
+          <!-- Total Holders Count -->
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <p
+              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Total Holders
+            </p>
+            <p class="text-base font-bold text-gray-900 mt-0.5">
+              {{
+                totalHoldersCount
+                  ? totalHoldersCount.toLocaleString("en-US")
+                  : "0"
+              }}
+            </p>
           </div>
         </div>
       </div>
