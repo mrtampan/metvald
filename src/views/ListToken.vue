@@ -569,8 +569,10 @@ onMounted(() => {
 
                 <!-- Name Pair -->
                 <td class="py-3 px-4">
-                  <div class="flex items-center gap-3">
-                    <div class="flex -space-x-2 overflow-hidden flex-shrink-0">
+                  <div class="flex items-start gap-3">
+                    <div
+                      class="flex -space-x-2 overflow-hidden flex-shrink-0 mt-0.5"
+                    >
                       <img
                         :src="
                           pool.token_x?.icon ||
@@ -633,6 +635,84 @@ onMounted(() => {
                           Copied!
                         </span>
                       </div>
+
+                      <!-- External Tool Links -->
+                      <div class="flex items-center gap-0.5 mt-1.5">
+                        <!-- Bubblemaps Link -->
+                        <a
+                          :href="`https://v2.bubblemaps.io/map?address=${getBaseToken(pool)?.address || pool.pool_address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center p-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-md transition"
+                          title="Bubblemaps"
+                        >
+                          <img
+                            src="https://www.google.com/s2/favicons?domain=bubblemaps.io&sz=64"
+                            alt="Bubblemaps"
+                            class="w-3.5 h-3.5 rounded-xs object-contain"
+                          />
+                        </a>
+
+                        <!-- Fabriq Link -->
+                        <a
+                          :href="`https://fabriq.trade/trending?includeTokens=${getBaseToken(pool)?.address || pool.pool_address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center p-1 bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-200 rounded-md transition"
+                          title="Fabriq Trade"
+                        >
+                          <img
+                            src="https://www.google.com/s2/favicons?domain=fabriq.trade&sz=64"
+                            alt="Fabriq Trade"
+                            class="w-3.5 h-3.5 rounded-xs object-contain"
+                          />
+                        </a>
+
+                        <!-- Axiom Link -->
+                        <a
+                          :href="`https://axiom.trade/t/${getBaseToken(pool)?.address || pool.pool_address}/`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center p-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-md transition"
+                          title="Axiom Trade"
+                        >
+                          <img
+                            src="https://www.google.com/s2/favicons?domain=axiom.trade&sz=64"
+                            alt="Axiom Trade"
+                            class="w-3.5 h-3.5 rounded-xs object-contain"
+                          />
+                        </a>
+
+                        <!-- GMGN Link -->
+                        <a
+                          :href="`https://gmgn.ai/sol/token/${getBaseToken(pool)?.address || pool.pool_address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center p-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 rounded-md transition"
+                          title="GMGN"
+                        >
+                          <img
+                            src="https://www.google.com/s2/favicons?domain=gmgn.ai&sz=64"
+                            alt="GMGN"
+                            class="w-3.5 h-3.5 rounded-xs object-contain"
+                          />
+                        </a>
+
+                        <!-- Meteora Link -->
+                        <a
+                          :href="`https://app.meteora.ag/dlmm/${pool.pool_address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center p-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-md transition"
+                          title="Meteora"
+                        >
+                          <img
+                            src="https://www.google.com/s2/favicons?domain=meteora.ag&sz=64"
+                            alt="Meteora"
+                            class="w-3.5 h-3.5 rounded-xs object-contain"
+                          />
+                        </a>
+                      </div>
                     </div>
                   </div>
                 </td>
@@ -687,56 +767,11 @@ onMounted(() => {
                       target="_blank"
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded-lg shadow-xs transition"
+                      title="Screening"
                     >
                       Screening
                       <svg
                         class="w-3 h-3 opacity-80"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
-
-                    <!-- GMGN Link (New Tab) -->
-                    <a
-                      :href="`https://gmgn.ai/solana/token/${getBaseToken(pool)?.address}`"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 bg-purple-50 hover:bg-purple-100 text-purple-700 border border-purple-200 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition"
-                    >
-                      GMGN
-                      <svg
-                        class="w-3 h-3 opacity-60"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
-
-                    <!-- Meteora Link (New Tab) -->
-                    <a
-                      :href="`https://app.meteora.ag/dlmm/${pool.pool_address}`"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-semibold text-xs px-2.5 py-1.5 rounded-lg transition"
-                    >
-                      Meteora
-                      <svg
-                        class="w-3 h-3 opacity-60"
                         fill="none"
                         stroke="currentColor"
                         viewBox="0 0 24 24"
