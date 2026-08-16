@@ -17,8 +17,8 @@ const holdersData = ref([]);
 const totalHoldersCount = ref(0);
 const top10Percentage = ref(0);
 
-const bundledWalletsCount = ref(0);
-const bundledSupplyPct = ref(0);
+const insiderWalletsCount = ref(0);
+const insiderSupplyPct = ref(0);
 
 const fetchScreeningData = async () => {
   const address = token.value.trim();
@@ -84,8 +84,8 @@ const fetchScreeningData = async () => {
       top10Percentage.value = Number(top10Sum.toFixed(2));
     }
 
-    // Extract Bundler & Insider Networks Data
-    let rawBundledCount = Number(data.graphInsidersDetected) || 0;
+    // Extract Insider Networks Data
+    let rawInsiderCount = Number(data.graphInsidersDetected) || 0;
 
     const ownerCountsMap = {};
     holdersData.value.forEach((h) => {
@@ -94,21 +94,21 @@ const fetchScreeningData = async () => {
       }
     });
 
-    const bundledHolders = holdersData.value.filter(
+    const insiderHolders = holdersData.value.filter(
       (h) =>
         h.insider || (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
     );
 
-    const rawBundledSupply = bundledHolders.reduce(
+    const rawInsiderSupply = insiderHolders.reduce(
       (acc, h) => acc + (h.pct || 0),
       0,
     );
 
-    bundledWalletsCount.value = Math.max(
-      rawBundledCount,
-      bundledHolders.length,
+    insiderWalletsCount.value = Math.max(
+      rawInsiderCount,
+      insiderHolders.length,
     );
-    bundledSupplyPct.value = Number(rawBundledSupply.toFixed(2));
+    insiderSupplyPct.value = Number(rawInsiderSupply.toFixed(2));
 
     try {
       const dexResponse = await fetch(
@@ -169,7 +169,7 @@ const getRiskLevel = (score) => {
   };
 };
 
-const getRiskBundleLevel = (count) => {
+const getRiskInsiderLevel = (count) => {
   if (count > 2000)
     return {
       level: "HIGH RISK",
@@ -560,29 +560,29 @@ watch(
 
         <!-- Metrics Grid (Count Bundled, Top 10 Supply Share, Total Holders) -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <!-- Count Bundled -->
+          <!-- Count Insiders -->
           <div
             :class="[
               'p-3 rounded-xl border transition-colors',
-              getRiskBundleLevel(bundledWalletsCount).cardColor,
+              getRiskInsiderLevel(insiderWalletsCount).cardColor,
             ]"
           >
             <p
               :class="[
                 'text-[11px] font-semibold uppercase tracking-wider',
-                getRiskBundleLevel(bundledWalletsCount).labelColor,
+                getRiskInsiderLevel(insiderWalletsCount).labelColor,
               ]"
             >
-              Total Bundlers
+              Total Insiders
             </p>
             <div class="flex items-center justify-between mt-0.5">
               <p
                 :class="[
                   'text-base font-bold',
-                  getRiskBundleLevel(bundledWalletsCount).color,
+                  getRiskInsiderLevel(insiderWalletsCount).color,
                 ]"
               >
-                {{ bundledWalletsCount }}
+                {{ insiderWalletsCount }}
               </p>
             </div>
           </div>
