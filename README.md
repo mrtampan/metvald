@@ -2,6 +2,10 @@
 
 - Simple meteora analysis tools for profesionals DLMM mateora find best token. All in one
 
+## Requirement
+
+- Need birdeye api key for access holder profile
+
 ## installation
 
 ```sh
