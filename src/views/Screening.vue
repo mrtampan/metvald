@@ -22,6 +22,36 @@ const top10Percentage = ref(0);
 const insiderWalletsCount = ref(0);
 const insiderSupplyPct = ref(0);
 
+const selectedChart = ref("dexscreener");
+
+const chartPlatforms = [
+  { id: "dexscreener", name: "DexScreener" },
+  { id: "gmgn", name: "GMGN.ai" },
+  { id: "geckoterminal", name: "GeckoTerminal" },
+];
+
+const currentChartEmbedUrl = computed(() => {
+  if (!submittedAddress.value) return "";
+  if (selectedChart.value === "gmgn") {
+    return `https://www.gmgn.cc/kline/sol/${submittedAddress.value}?theme=light`;
+  }
+  if (selectedChart.value === "geckoterminal") {
+    return `https://www.geckoterminal.com/solana/tokens/${submittedAddress.value}?embed=1&info=0&swaps=0`;
+  }
+  return `https://dexscreener.com/solana/${submittedAddress.value}?embed=1&theme=light&trades=0&info=0`;
+});
+
+const currentChartExternalUrl = computed(() => {
+  if (!submittedAddress.value) return "#";
+  if (selectedChart.value === "gmgn") {
+    return `https://gmgn.ai/sol/token/${submittedAddress.value}`;
+  }
+  if (selectedChart.value === "geckoterminal") {
+    return `https://www.geckoterminal.com/solana/tokens/${submittedAddress.value}`;
+  }
+  return `https://dexscreener.com/solana/${submittedAddress.value}`;
+});
+
 const formattedHolderProfiles = computed(() => {
   if (!holderProfiles.value) return [];
 
@@ -534,16 +564,62 @@ watch(
           </div>
         </div>
 
-        <!-- TradingView Chart iFrame -->
-        <div
-          v-if="submittedAddress"
-          class="rounded-xl overflow-hidden border border-gray-200 bg-gray-50"
-        >
-          <iframe
-            :src="`https://dexscreener.com/solana/${submittedAddress}?embed=1&theme=light&trades=0&info=0`"
-            style="width: 100%; height: 520px; border: none"
-            allowfullscreen
-          ></iframe>
+        <!-- Chart Header & Platform Selector -->
+        <div v-if="submittedAddress" class="space-y-3 pt-2 border-t border-gray-100">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <!-- Embeddable Chart Tabs -->
+            <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+              <button
+                v-for="platform in chartPlatforms"
+                :key="platform.id"
+                @click="selectedChart = platform.id"
+                :class="[
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer',
+                  selectedChart === platform.id
+                    ? 'bg-white text-gray-900 shadow-xs font-bold'
+                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/60',
+                ]"
+              >
+                <span>{{ platform.name }}</span>
+              </button>
+            </div>
+
+            <!-- Open in Active Embed Chart -->
+            <a
+              :href="currentChartExternalUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-lg transition"
+            >
+              Open in
+              {{ chartPlatforms.find((p) => p.id === selectedChart)?.name }}
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+            </a>
+          </div>
+
+          <!-- Embedded Chart Container (DexScreener / GMGN / GeckoTerminal) -->
+          <div
+            class="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative"
+          >
+            <iframe
+              :key="`${selectedChart}-${submittedAddress}`"
+              :src="currentChartEmbedUrl"
+              style="width: 100%; height: 530px; border: none"
+              allowfullscreen
+            ></iframe>
+          </div>
         </div>
       </div>
 
