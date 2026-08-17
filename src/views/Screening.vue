@@ -12,6 +12,7 @@ const rugcheckData = ref(null);
 const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
+const meteoraData = ref(null);
 const submittedAddress = ref("");
 const holdersData = ref([]);
 const totalHoldersCount = ref(0);
@@ -19,6 +20,23 @@ const top10Percentage = ref(0);
 
 const insiderWalletsCount = ref(0);
 const insiderSupplyPct = ref(0);
+
+const formatCurrency = (val) => {
+  if (val === undefined || val === null || isNaN(val)) return "N/A";
+  return "$" + Number(val).toLocaleString("en-US", { maximumFractionDigits: 2 });
+};
+
+const formatAge = (createdAt) => {
+  if (!createdAt) return "N/A";
+  const diffMs = Date.now() - createdAt;
+  if (diffMs < 0) return "Just now";
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `${diffDays}d`;
+};
 
 const fetchScreeningData = async () => {
   const address = token.value.trim();
@@ -34,6 +52,7 @@ const fetchScreeningData = async () => {
   tokenMeta.value = null;
   riskDetails.value = null;
   dexscreenerData.value = null;
+  meteoraData.value = null;
   holdersData.value = [];
   totalHoldersCount.value = 0;
   top10Percentage.value = 0;
@@ -132,12 +151,53 @@ const fetchScreeningData = async () => {
     } catch (err) {
       console.log("DEX Screener fetch (non-critical):", err);
     }
+
+    // Fetch Meteora Data
+    try {
+      const filterByQuery = `(token_x=${address}||token_y=${address})`;
+      const meteoraUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h&category=top&filter_by=${encodeURIComponent(filterByQuery)}`;
+      const meteoraRes = await fetch(meteoraUrl);
+      if (meteoraRes.ok) {
+        const meteoraJson = await meteoraRes.json();
+        const pools = meteoraJson.data || meteoraJson.pools || [];
+        if (pools.length > 0) {
+          const item = pools[0];
+          const targetToken =
+            item.token_x?.address?.toLowerCase() === address.toLowerCase()
+              ? item.token_x
+              : item.token_y?.address?.toLowerCase() === address.toLowerCase()
+                ? item.token_y
+                : item.token_x;
+
+          const createdAt =
+            targetToken?.created_at || item.pool_created_at || null;
+          let ageInHours = null;
+          if (createdAt) {
+            ageInHours = (Date.now() - createdAt) / (1000 * 60 * 60);
+          }
+
+          meteoraData.value = {
+            positionsCreated: item.positions_created ?? 0,
+            totalLps: item.total_lps ?? 0,
+            createdAt: createdAt,
+            ageInHours: ageInHours,
+            fees: item.fee ?? 0,
+            marketcap: targetToken?.market_cap ?? 0,
+            tvl: item.tvl ?? 0,
+            volume: item.volume ?? 0,
+          };
+        }
+      }
+    } catch (err) {
+      console.log("Meteora fetch (non-critical):", err);
+    }
   } catch (error) {
     message.value = `Error: ${error.message}`;
     rugcheckData.value = null;
     tokenMeta.value = null;
     riskDetails.value = null;
     dexscreenerData.value = null;
+    meteoraData.value = null;
     holdersData.value = [];
     totalHoldersCount.value = 0;
     top10Percentage.value = 0;
@@ -455,6 +515,176 @@ watch(
             </p>
             <p class="text-sm font-semibold text-purple-600 mt-0.5 uppercase">
               {{ dexscreenerData?.dexId || "N/A" }}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meteora Data Card -->
+      <div
+        v-if="meteoraData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
+      >
+        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+          <svg
+            class="w-5 h-5 text-cyan-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M13 10V3L4 14h7v7l9-11h-7z"
+            />
+          </svg>
+          Meteora data
+        </h2>
+
+        <!-- Metrics Grid (Position Created, Total LPs, Token Age, Fees, Marketcap, TVL, Volume) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          <!-- Position Created -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.positionsCreated < 50
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.positionsCreated < 50
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Position Created
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ meteoraData.positionsCreated.toLocaleString("en-US") }}
+            </p>
+          </div>
+
+          <!-- Total LPs -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.totalLps < 50
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.totalLps < 50
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Total LPs
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ meteoraData.totalLps.toLocaleString("en-US") }}
+            </p>
+          </div>
+
+          <!-- Token Age -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.ageInHours === null || meteoraData.ageInHours < 10
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.ageInHours === null || meteoraData.ageInHours < 10
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Token Age
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatAge(meteoraData.createdAt) }}
+            </p>
+          </div>
+
+          <!-- Fees -->
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <p
+              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              Fees
+            </p>
+            <p class="text-sm font-bold text-gray-900 mt-0.5">
+              {{ formatCurrency(meteoraData.fees) }}
+            </p>
+          </div>
+
+          <!-- Marketcap -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.marketcap < 250000
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.marketcap < 250000
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Market Cap
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(meteoraData.marketcap) }}
+            </p>
+          </div>
+
+          <!-- TVL -->
+          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
+            <p
+              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+            >
+              TVL
+            </p>
+            <p class="text-sm font-bold text-gray-900 mt-0.5">
+              {{ formatCurrency(meteoraData.tvl) }}
+            </p>
+          </div>
+
+          <!-- Volume -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.volume < 1000
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.volume < 1000
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Volume
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(meteoraData.volume) }}
             </p>
           </div>
         </div>
