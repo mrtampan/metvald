@@ -842,7 +842,6 @@ onMounted(() => {
                     <!-- Screening Link (New Tab) -->
                     <a
                       :href="`/screening?token=${getBaseToken(pool)?.address}`"
-                      target="_blank"
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded-lg shadow-xs transition"
                       title="Screening"
