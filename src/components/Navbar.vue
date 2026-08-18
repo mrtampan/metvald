@@ -27,6 +27,15 @@
           >
             Check Token
           </RouterLink>
+          <RouterLink
+            to="/dexscreener-list"
+            class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium flex items-center gap-1.5"
+          >
+            <span
+              class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+            ></span>
+            Dexscreener List
+          </RouterLink>
         </div>
 
         <!-- Mobile Menu Button -->
@@ -80,6 +89,12 @@
           class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
         >
           List Token
+        </RouterLink>
+        <RouterLink
+          to="/dexscreener-list"
+          class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
+        >
+          Dexscreener List
         </RouterLink>
         <RouterLink
           to="/check-token"

@@ -3,12 +3,14 @@ import Home from '../views/Home.vue'
 import CheckToken from '../views/CheckToken.vue'
 import Screening from '../views/Screening.vue'
 import ListToken from '../views/ListToken.vue'
+import DexscreenerList from '../views/DexscreenerList.vue'
 
 const routes = [
   { path: '/', name: 'home', component: Home },
   { path: '/check-token', name: 'check-token', component: CheckToken },
   { path: '/screening', name: 'screening', component: Screening },
-  { path: '/list-token', name: 'list-token', component: ListToken }
+  { path: '/list-token', name: 'list-token', component: ListToken },
+  { path: '/dexscreener-list', name: 'dexscreener-list', component: DexscreenerList }
 ]
 
 const router = createRouter({
