@@ -565,7 +565,10 @@ watch(
         </div>
 
         <!-- Chart Header & Platform Selector -->
-        <div v-if="submittedAddress" class="space-y-3 pt-2 border-t border-gray-100">
+        <div
+          v-if="submittedAddress"
+          class="space-y-3 pt-2 border-t border-gray-100"
+        >
           <div class="flex flex-wrap items-center justify-between gap-2">
             <!-- Embeddable Chart Tabs -->
             <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
@@ -829,9 +832,13 @@ watch(
             <div class="mt-3 pt-2.5 border-t border-gray-200/70 space-y-1.5">
               <div class="flex items-center justify-between text-xs">
                 <span class="text-gray-500 font-medium">Holding Share</span>
-                <span class="font-bold text-gray-800">{{ tg.percentage }}%</span>
+                <span class="font-bold text-gray-800"
+                  >{{ tg.percentage }}%</span
+                >
               </div>
-              <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+              <div
+                class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden"
+              >
                 <div
                   :class="[
                     'h-1.5 rounded-full transition-all duration-500',
@@ -1132,7 +1139,7 @@ watch(
                 getRiskInsiderLevel(insiderWalletsCount).labelColor,
               ]"
             >
-              Total Insiders
+              Network Insiders
             </p>
             <div class="flex items-center justify-between mt-0.5">
               <p
