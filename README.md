@@ -25,3 +25,4 @@ npm run build
 - Dexscreener
 - Rugcheck.xyz
 - Meteora DLMM API
+- Birdeye
