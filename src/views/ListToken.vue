@@ -1,6 +1,7 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { watchDebounced } from "@vueuse/core";
 
 const router = useRouter();
 
@@ -38,6 +39,44 @@ const PRESET_ALL = {
 const filters = ref({ ...PRESET_DEFAULT });
 const activePresetKey = ref("default"); // 'default', 'all', atau ID custom preset
 const customPresets = ref([]);
+const searchToken = ref(""); // Single token search input
+
+// Computed property untuk filter instan di client side berdasarkan kolom data token
+const filteredPools = computed(() => {
+  if (!searchToken.value || !searchToken.value.trim()) {
+    return pools.value;
+  }
+  const query = searchToken.value.trim().toLowerCase();
+  return pools.value.filter((pool) => {
+    const tokenXAddr = pool.token_x?.address?.toLowerCase() || "";
+    const tokenYAddr = pool.token_y?.address?.toLowerCase() || "";
+    const tokenXSym = pool.token_x?.symbol?.toLowerCase() || "";
+    const tokenYSym = pool.token_y?.symbol?.toLowerCase() || "";
+    const poolAddr = pool.pool_address?.toLowerCase() || "";
+    const poolName = pool.name?.toLowerCase() || "";
+
+    return (
+      tokenXAddr.includes(query) ||
+      tokenYAddr.includes(query) ||
+      tokenXSym.includes(query) ||
+      tokenYSym.includes(query) ||
+      poolAddr.includes(query) ||
+      poolName.includes(query)
+    );
+  });
+});
+
+// Watch searchToken menggunakan watchDebounced VueUse untuk auto refetch API saat input berubah
+watchDebounced(
+  searchToken,
+  (newVal) => {
+    const trimmed = (newVal || "").trim();
+    if (!trimmed || trimmed.length >= 30) {
+      fetchTokenList();
+    }
+  },
+  { debounce: 350, maxWait: 1000 },
+);
 
 // State modal buat preset baru
 const isModalOpen = ref(false);
@@ -128,6 +167,12 @@ const getBaseToken = (pool) => {
   return pool.token_x || pool.token_y || {};
 };
 
+// Helper untuk reset pencarian token
+const clearTokenSearch = () => {
+  searchToken.value = "";
+  fetchTokenList();
+};
+
 // Fetch data dari Meteora Discovery API
 const fetchTokenList = async () => {
   isLoading.value = true;
@@ -135,6 +180,30 @@ const fetchTokenList = async () => {
 
   try {
     const filterConditions = [];
+
+    // Filter pencarian Token Address
+    if (searchToken.value && searchToken.value.trim()) {
+      const input = searchToken.value.trim();
+      if (input.includes("token_x=") || input.includes("token_y=")) {
+        filterConditions.push(input);
+      } else if (input.includes("&&")) {
+        const parts = input.split("&&").map((p) => p.trim());
+        if (parts.length === 2) {
+          filterConditions.push(`token_x=${parts[0]}&&token_y=${parts[1]}`);
+        } else {
+          filterConditions.push(input);
+        }
+      } else if (input.includes(",")) {
+        const parts = input.split(",").map((p) => p.trim());
+        if (parts.length === 2) {
+          filterConditions.push(`token_x=${parts[0]}&&token_y=${parts[1]}`);
+        } else {
+          filterConditions.push(`token_x=${input}||token_y=${input}`);
+        }
+      } else {
+        filterConditions.push(`token_x=${input}||token_y=${input}`);
+      }
+    }
 
     if (filters.value.noCriticalWarnings) {
       filterConditions.push("base_token_has_critical_warnings=false");
@@ -203,7 +272,9 @@ const fetchTokenList = async () => {
     }
 
     const filterByQuery = filterConditions.join("&&");
-    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h&category=top&filter_by=${encodeURIComponent(filterByQuery)}`;
+    const categoryParam =
+      searchToken.value && searchToken.value.trim() ? "" : "&category=top";
+    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h${categoryParam}&filter_by=${encodeURIComponent(filterByQuery)}`;
 
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -581,10 +652,60 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- Single Token Search Bar (Di Bawah Filter) -->
+      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+        <div class="relative w-full">
+          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+          </div>
+          <input
+            v-model.trim="searchToken"
+            type="text"
+            placeholder="Cari berdasarkan Token Address, Symbol, atau Pair (contoh: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN)..."
+            class="w-full pl-10 pr-9 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50/50 font-mono transition"
+          />
+          <button
+            v-if="searchToken"
+            @click="clearTokenSearch"
+            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
+            title="Hapus pencarian"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Active Search Notice (Di Dalam Card Pencarian) -->
+        <div
+          v-if="searchToken"
+          class="bg-blue-50/80 rounded-xl p-2.5 border border-blue-100 flex items-center justify-between text-xs text-blue-800"
+        >
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="font-bold">Hasil Pencarian Token:</span>
+            <span class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-mono text-[11px]">
+              {{ searchToken }}
+            </span>
+            <span class="text-gray-500 text-[11px]">
+              ({{ filteredPools.length }} pool ditemukan)
+            </span>
+          </div>
+          <button
+            @click="clearTokenSearch"
+            class="text-blue-700 hover:text-red-600 underline text-xs font-semibold ml-2 transition"
+          >
+            Hapus Pencarian
+          </button>
+        </div>
+      </div>
+
       <!-- Table Card -->
       <div
         class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
       >
+
         <!-- Loading State -->
         <div v-if="isLoading" class="py-16 text-center text-gray-500">
           <div
@@ -609,10 +730,10 @@ onMounted(() => {
 
         <!-- Empty State -->
         <div
-          v-else-if="pools.length === 0"
+          v-else-if="filteredPools.length === 0"
           class="py-16 text-center text-gray-500"
         >
-          <p class="font-medium">Tidak ada pool yang ditemukan.</p>
+          <p class="font-medium">Tidak ada pool yang cocok dengan pencarian.</p>
         </div>
 
         <!-- Table View -->
@@ -634,7 +755,7 @@ onMounted(() => {
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm">
               <tr
-                v-for="(pool, index) in pools"
+                v-for="(pool, index) in filteredPools"
                 :key="pool.pool_address || index"
                 class="hover:bg-gray-50 transition"
               >
