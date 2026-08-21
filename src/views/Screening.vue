@@ -343,7 +343,6 @@ const fetchScreeningData = async () => {
       );
       if (dexResponse.ok) {
         const dexDataResponse = await dexResponse.json();
-        console.log(dexDataResponse);
         if (dexDataResponse.pairs && dexDataResponse.pairs.length > 0) {
           const pair = dexDataResponse.pairs[0];
           dexscreenerData.value = {
