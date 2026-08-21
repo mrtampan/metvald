@@ -1,9 +1,11 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useScreeningStore } from "../stores/screeningStore";
 
 const route = useRoute();
 const router = useRouter();
+const screeningStore = useScreeningStore();
 const token = computed(() => route.query.token || "");
 const tokenInput = ref(token.value);
 const isLoading = ref(false);
@@ -401,6 +403,19 @@ const fetchScreeningData = async () => {
     } catch (err) {
       console.log("Meteora fetch (non-critical):", err);
     }
+
+    // Record screening history ke central Pinia store
+    const tokenName =
+      dexscreenerData.value?.name ||
+      tokenMeta.value?.name ||
+      tokenMeta.value?.symbol ||
+      "Unknown";
+    const tokenIcon = dexscreenerData.value?.imageUrl || "";
+    screeningStore.recordScreeningHistory({
+      address,
+      name: tokenName,
+      icon: tokenIcon,
+    });
   } catch (error) {
     message.value = `Error: ${error.message}`;
     rugcheckData.value = null;

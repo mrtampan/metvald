@@ -2,8 +2,12 @@
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { watchDebounced } from "@vueuse/core";
+import { storeToRefs } from "pinia";
+import { useScreeningStore } from "../stores/screeningStore";
 
 const router = useRouter();
+const screeningStore = useScreeningStore();
+const { screeningHistory } = storeToRefs(screeningStore);
 
 const pools = ref([]);
 const isLoading = ref(false);
@@ -40,7 +44,6 @@ const filters = ref({ ...PRESET_DEFAULT });
 const activePresetKey = ref("default"); // 'default', 'all', atau ID custom preset
 const customPresets = ref([]);
 const searchToken = ref(""); // Single token search input
-const screeningHistory = ref([]); // History token screening dari sessionStorage
 
 
 // Computed property untuk filter instan di client side berdasarkan kolom data token
@@ -326,63 +329,9 @@ const formatAge = (createdAt) => {
   return `${diffDays}d`;
 };
 
-// Helper & State Management History Screening (sessionStorage)
-const loadScreeningHistory = () => {
-  try {
-    const raw = sessionStorage.getItem("metvald_screening_history");
-    if (raw) {
-      screeningHistory.value = JSON.parse(raw);
-    } else {
-      screeningHistory.value = [];
-    }
-  } catch (e) {
-    console.error("Gagal membaca history screening dari sessionStorage:", e);
-    screeningHistory.value = [];
-  }
-};
-
-const saveScreeningToken = (tokenObj) => {
-  if (!tokenObj || !tokenObj.address) return;
-  try {
-    const raw = sessionStorage.getItem("metvald_screening_history");
-    let list = raw ? JSON.parse(raw) : [];
-
-    list = list.filter(
-      (item) => item.address?.toLowerCase() !== tokenObj.address.toLowerCase(),
-    );
-
-    list.unshift({
-      address: tokenObj.address,
-      name: tokenObj.name || tokenObj.symbol || "Unknown",
-      icon:
-        tokenObj.icon ||
-        tokenObj.image ||
-        "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
-    });
-
-    if (list.length > 20) {
-      list = list.slice(0, 20);
-    }
-
-    sessionStorage.setItem("metvald_screening_history", JSON.stringify(list));
-    screeningHistory.value = list;
-  } catch (e) {
-    console.error("Gagal menyimpan history screening:", e);
-  }
-};
-
+// Helper & State Management History Screening (Pinia Store)
 const clearScreeningHistory = () => {
-  sessionStorage.removeItem("metvald_screening_history");
-  screeningHistory.value = [];
-};
-
-const recordPoolScreening = (pool) => {
-  const baseToken = getBaseToken(pool);
-  const address = baseToken?.address || pool.pool_address;
-  if (!address) return;
-  const name = baseToken?.symbol || baseToken?.name || pool.name || "Unknown";
-  const icon = baseToken?.icon || pool.token_x?.icon || pool.token_y?.icon;
-  saveScreeningToken({ address, name, icon });
+  screeningStore.clearScreeningHistory();
 };
 
 const truncateAddress = (addr) => {
@@ -393,7 +342,7 @@ const truncateAddress = (addr) => {
 
 onMounted(() => {
   loadCustomPresets();
-  loadScreeningHistory();
+  screeningStore.loadScreeningHistory();
   fetchTokenList();
 });
 </script>
@@ -777,7 +726,6 @@ onMounted(() => {
             v-for="item in screeningHistory"
             :key="item.address"
             :href="`/screening?token=${item.address}`"
-            @click="saveScreeningToken(item)"
             class="flex items-center gap-2.5 px-3 py-2 bg-gray-50 hover:bg-blue-50/80 border border-gray-200 hover:border-blue-300 rounded-xl transition flex-shrink-0 group shadow-2xs"
             :title="`Screening ${item.name} (${item.address})`"
           >
@@ -1125,7 +1073,6 @@ onMounted(() => {
                     <!-- Screening Link (New Tab) -->
                     <a
                       :href="`/screening?token=${getBaseToken(pool)?.address}`"
-                      @click="recordPoolScreening(pool)"
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded-lg shadow-xs transition"
                       title="Screening"
