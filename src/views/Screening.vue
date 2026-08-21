@@ -52,6 +52,53 @@ const currentChartExternalUrl = computed(() => {
   return `https://dexscreener.com/solana/${submittedAddress.value}`;
 });
 
+const tokenWebsites = computed(() => {
+  const sites = dexscreenerData.value?.websites || [];
+  if (!sites) return [];
+  if (typeof sites === "string" && sites.trim()) {
+    return [{ label: "Website", url: sites.trim() }];
+  }
+  if (Array.isArray(sites)) {
+    return sites
+      .filter((s) => s && (s.url || typeof s === "string"))
+      .map((s) => {
+        if (typeof s === "string") return { label: "Website", url: s };
+        return { label: s.label || s.type || "Website", url: s.url };
+      });
+  }
+  return [];
+});
+
+const tokenSocials = computed(() => {
+  const socials = dexscreenerData.value?.socials || [];
+  if (!socials) return [];
+  if (Array.isArray(socials)) {
+    return socials
+      .filter((s) => s && (s.url || typeof s === "string"))
+      .map((s) => {
+        if (typeof s === "string") {
+          let type = "social";
+          if (s.includes("twitter.com") || s.includes("x.com"))
+            type = "twitter";
+          else if (s.includes("t.me") || s.includes("telegram"))
+            type = "telegram";
+          else if (s.includes("discord")) type = "discord";
+          return { type, url: s };
+        }
+        let type = (s.type || s.label || "").toLowerCase();
+        if (!type && s.url) {
+          if (s.url.includes("twitter.com") || s.url.includes("x.com"))
+            type = "twitter";
+          else if (s.url.includes("t.me") || s.url.includes("telegram"))
+            type = "telegram";
+          else if (s.url.includes("discord")) type = "discord";
+        }
+        return { type: type || "social", url: s.url };
+      });
+  }
+  return [];
+});
+
 const formattedHolderProfiles = computed(() => {
   if (!holderProfiles.value) return [];
 
@@ -296,6 +343,7 @@ const fetchScreeningData = async () => {
       );
       if (dexResponse.ok) {
         const dexDataResponse = await dexResponse.json();
+        console.log(dexDataResponse);
         if (dexDataResponse.pairs && dexDataResponse.pairs.length > 0) {
           const pair = dexDataResponse.pairs[0];
           dexscreenerData.value = {
@@ -306,6 +354,8 @@ const fetchScreeningData = async () => {
             volume24h: pair.volume?.h24 || 0,
             dexId: pair.dexId || "Unknown",
             imageUrl: pair.info?.imageUrl || "",
+            socials: pair.info?.socials,
+            websites: pair.info?.websites,
           };
         }
       }
@@ -530,37 +580,169 @@ watch(
         v-if="tokenMeta || dexscreenerData || submittedAddress"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
       >
-        <!-- Token Header (Image, Name & Symbol) -->
-        <div class="flex items-center gap-3">
-          <img
-            :src="
-              dexscreenerData?.imageUrl ||
-              'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
-            "
-            :alt="tokenMeta?.name || dexscreenerData?.name"
-            class="w-10 h-10 rounded-full border border-gray-200 object-cover bg-gray-100 flex-shrink-0"
-            @error="
-              (e) =>
-                (e.target.src =
-                  'https://cdn.dexscreener.com/assets/favicon.ico')
-            "
-          />
-          <div>
-            <div class="flex items-center gap-2">
-              <h2 class="text-lg font-bold text-gray-900">
-                {{
-                  tokenMeta?.name || dexscreenerData?.name || "Unknown Token"
-                }}
-              </h2>
-              <span
-                class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-md"
-              >
-                {{ tokenMeta?.symbol || dexscreenerData?.symbol || "N/A" }}
-              </span>
+        <!-- Token Header (Image, Name & Symbol + Website/Socials on far right) -->
+        <div class="flex items-center justify-between gap-3 flex-wrap">
+          <div class="flex items-center gap-3">
+            <img
+              :src="
+                dexscreenerData?.imageUrl ||
+                'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
+              "
+              :alt="tokenMeta?.name || dexscreenerData?.name"
+              class="w-10 h-10 rounded-full border border-gray-200 object-cover bg-gray-100 flex-shrink-0"
+              @error="
+                (e) =>
+                  (e.target.src =
+                    'https://cdn.dexscreener.com/assets/favicon.ico')
+              "
+            />
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg font-bold text-gray-900">
+                  {{
+                    tokenMeta?.name || dexscreenerData?.name || "Unknown Token"
+                  }}
+                </h2>
+                <span
+                  class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-md"
+                >
+                  {{ tokenMeta?.symbol || dexscreenerData?.symbol || "N/A" }}
+                </span>
+              </div>
+              <p class="text-xs text-gray-400 font-mono mt-0.5 break-all">
+                {{ submittedAddress }}
+              </p>
             </div>
-            <p class="text-xs text-gray-400 font-mono mt-0.5 break-all">
-              {{ submittedAddress }}
-            </p>
+          </div>
+
+          <!-- Website & Social Links (Aligned to Far Right) -->
+          <div
+            v-if="tokenWebsites.length || tokenSocials.length"
+            class="flex items-center gap-1.5 ml-auto"
+          >
+            <!-- Website Links -->
+            <a
+              v-for="(site, idx) in tokenWebsites"
+              :key="'web-' + idx"
+              :href="site.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              :title="site.label || 'Website'"
+              class="p-1.5 text-gray-600 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition flex items-center justify-center shadow-xs"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M3.6 9h16.8M3.6 15h16.8M11.5 3a17 17 0 000 18M12.5 3a17 17 0 010 18"
+                />
+              </svg>
+            </a>
+
+            <!-- Social Links -->
+            <a
+              v-for="(soc, idx) in tokenSocials"
+              :key="'soc-' + idx"
+              :href="soc.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              :title="soc.type ? soc.type.toUpperCase() : 'Social'"
+              class="p-1.5 text-gray-600 hover:text-blue-600 bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded-lg transition flex items-center justify-center shadow-xs"
+            >
+              <!-- Twitter / X -->
+              <svg
+                v-if="soc.type === 'twitter' || soc.type === 'x'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
+                />
+              </svg>
+
+              <!-- Telegram -->
+              <svg
+                v-else-if="soc.type === 'telegram'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"
+                />
+              </svg>
+
+              <!-- Discord -->
+              <svg
+                v-else-if="soc.type === 'discord'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994.021-.041.001-.09-.041-.106a13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.061 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"
+                />
+              </svg>
+
+              <!-- TikTok -->
+              <svg
+                v-else-if="soc.type === 'tiktok'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-5.2 1.74 2.89 2.89 0 012.31-4.64c.29 0 .56.04.82.12V9.4a6.27 6.27 0 00-1-.08A6.34 6.34 0 003 15.66a6.34 6.34 0 0010.86 4.48 6.32 6.32 0 001.83-4.48V8.6a8.28 8.28 0 005.2 1.84V7a4.84 4.84 0 01-1.3-.31z"
+                />
+              </svg>
+
+              <!-- Youtube -->
+              <svg
+                v-else-if="soc.type === 'youtube'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"
+                />
+              </svg>
+
+              <!-- Reddit -->
+              <svg
+                v-else-if="soc.type === 'reddit'"
+                class="w-3.5 h-3.5 fill-current"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.11 3.11 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.562-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.688-.562-1.249-1.25-1.249zm-4.566 4.34c-.1.099-.1.26 0 .36.634.634 1.677.828 2.316.828.639 0 1.682-.194 2.316-.828a.255.255 0 0 0 0-.36.255.255 0 0 0-.36 0c-.477.477-1.343.644-1.956.644-.613 0-1.479-.167-1.956-.644a.247.247 0 0 0-.36 0z"
+                />
+              </svg>
+
+              <!-- Generic Link / Fallback -->
+              <svg
+                v-else
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
+                />
+              </svg>
+            </a>
           </div>
         </div>
 
