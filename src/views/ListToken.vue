@@ -45,7 +45,6 @@ const activePresetKey = ref("default"); // 'default', 'all', atau ID custom pres
 const customPresets = ref([]);
 const searchToken = ref(""); // Single token search input
 
-
 // Computed property untuk filter instan di client side berdasarkan kolom data token
 const filteredPools = computed(() => {
   if (!searchToken.value || !searchToken.value.trim()) {
@@ -83,12 +82,39 @@ watchDebounced(
   { debounce: 350, maxWait: 1000 },
 );
 
-// State modal buat preset baru
+// Watch filters secara debounced untuk auto fetch ketika input filter berubah secara real-time
+watchDebounced(
+  filters,
+  () => {
+    fetchTokenList();
+  },
+  { debounce: 400, maxWait: 1200, deep: true },
+);
+
+// State modal & notification
+const isFilterModalOpen = ref(false);
 const isModalOpen = ref(false);
 const newPresetName = ref("");
+const presetSuccessMessage = ref("");
 
-// Toggle filter panel visibility
-const showFilterPanel = ref(true);
+// Computed property untuk mengecek apakah preset saat ini adalah preset custom (dari localStorage)
+const isCurrentPresetCustom = computed(() => {
+  return (
+    activePresetKey.value !== "default" &&
+    activePresetKey.value !== "all" &&
+    customPresets.value.some((p) => p.id === activePresetKey.value)
+  );
+});
+
+// Computed property untuk label preset aktif
+const activePresetName = computed(() => {
+  if (activePresetKey.value === "default") return "Default Filter";
+  if (activePresetKey.value === "all") return "Show All";
+  const custom = customPresets.value.find(
+    (p) => p.id === activePresetKey.value,
+  );
+  return custom ? custom.name : "Custom Filter";
+});
 
 // Load custom presets dari localStorage
 const loadCustomPresets = () => {
@@ -102,14 +128,39 @@ const loadCustomPresets = () => {
   }
 };
 
-// Simpan preset custom ke localStorage
+// Update preset custom yang sedang aktif di localStorage (Hanya untuk preset custom)
+const updateCurrentPreset = () => {
+  if (!isCurrentPresetCustom.value) return;
+  const index = customPresets.value.findIndex(
+    (p) => p.id === activePresetKey.value,
+  );
+  if (index !== -1) {
+    customPresets.value[index].filters = JSON.parse(
+      JSON.stringify(filters.value),
+    );
+    try {
+      localStorage.setItem(
+        "metvald_custom_presets",
+        JSON.stringify(customPresets.value),
+      );
+      presetSuccessMessage.value = `Preset "${customPresets.value[index].name}" berhasil diperbarui!`;
+      setTimeout(() => {
+        presetSuccessMessage.value = "";
+      }, 3000);
+    } catch (e) {
+      console.error("Gagal memperbarui preset di localStorage:", e);
+    }
+  }
+};
+
+// Simpan preset custom baru ke localStorage
 const saveCurrentAsPreset = () => {
   if (!newPresetName.value.trim()) return;
 
   const newPreset = {
     id: Date.now(),
     name: newPresetName.value.trim(),
-    filters: { ...filters.value },
+    filters: JSON.parse(JSON.stringify(filters.value)),
   };
 
   customPresets.value.push(newPreset);
@@ -118,6 +169,10 @@ const saveCurrentAsPreset = () => {
       "metvald_custom_presets",
       JSON.stringify(customPresets.value),
     );
+    presetSuccessMessage.value = `Preset "${newPreset.name}" berhasil disimpan!`;
+    setTimeout(() => {
+      presetSuccessMessage.value = "";
+    }, 3000);
   } catch (e) {
     console.error("Gagal menyimpan preset ke localStorage:", e);
   }
@@ -148,11 +203,11 @@ const deleteCustomPreset = (id, event) => {
 const applyPreset = (key, customPresetObj = null) => {
   activePresetKey.value = key;
   if (key === "default") {
-    filters.value = { ...PRESET_DEFAULT };
+    filters.value = JSON.parse(JSON.stringify(PRESET_DEFAULT));
   } else if (key === "all") {
-    filters.value = { ...PRESET_ALL };
+    filters.value = JSON.parse(JSON.stringify(PRESET_ALL));
   } else if (customPresetObj) {
-    filters.value = { ...customPresetObj.filters };
+    filters.value = JSON.parse(JSON.stringify(customPresetObj.filters));
   }
   fetchTokenList();
 };
@@ -363,8 +418,8 @@ onMounted(() => {
 
         <div class="flex items-center gap-3">
           <button
-            @click="showFilterPanel = !showFilterPanel"
-            class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-1.5"
+            @click="isFilterModalOpen = true"
+            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm"
           >
             <svg
               class="w-4 h-4"
@@ -379,13 +434,18 @@ onMounted(() => {
                 d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
               />
             </svg>
-            {{ showFilterPanel ? "Sembunyikan Filter" : "Tampilkan Filter" }}
+            <span>Filter</span>
+            <span
+              class="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-lg"
+            >
+              {{ activePresetName }}
+            </span>
           </button>
 
           <button
             @click="fetchTokenList"
             :disabled="isLoading"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
+            class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
           >
             <svg
               :class="['w-4 h-4', isLoading ? 'animate-spin' : '']"
@@ -405,267 +465,420 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Presets & Filter Panel -->
+      <!-- Toast / Notification Success Preset -->
       <div
-        v-if="showFilterPanel"
-        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-5"
+        v-if="presetSuccessMessage"
+        class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold px-4 py-3 rounded-2xl flex items-center justify-between transition"
       >
-        <!-- Preset Selector Bar -->
-        <div
-          class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 pb-4"
+        <div class="flex items-center gap-2">
+          <svg
+            class="w-4 h-4 text-emerald-600"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M5 13l4 4L19 7"
+            />
+          </svg>
+          <span>{{ presetSuccessMessage }}</span>
+        </div>
+        <button
+          @click="presetSuccessMessage = ''"
+          class="text-emerald-500 hover:text-emerald-700 text-xs font-bold"
         >
-          <div class="flex flex-wrap items-center gap-2">
-            <span
-              class="text-xs font-bold uppercase text-gray-400 mr-1 tracking-wider"
-              >Presets:</span
-            >
+          &times;
+        </button>
+      </div>
 
-            <!-- Built-in Preset: Default Filter -->
+      <!-- Full Modal Filter -->
+      <div
+        v-if="isFilterModalOpen"
+        class="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 sm:p-6 z-50 overflow-y-auto"
+        @click.self="isFilterModalOpen = false"
+      >
+        <div
+          class="bg-white rounded-3xl shadow-2xl border border-gray-100 w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+        >
+          <!-- Modal Header -->
+          <div
+            class="px-6 py-4 border-b border-gray-100 flex items-center justify-between bg-gray-50/50"
+          >
+            <div class="flex items-center gap-3">
+              <div class="p-2.5 bg-blue-50 text-blue-600 rounded-2xl">
+                <svg
+                  class="w-5 h-5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+                  />
+                </svg>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-gray-900">
+                  Pengaturan Filter
+                </h2>
+                <p class="text-xs text-gray-500">
+                  Sesuaikan kriteria filter. Perubahan pada input akan langsung
+                  diterapkan.
+                </p>
+              </div>
+            </div>
+
             <button
-              @click="applyPreset('default')"
-              :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border',
-                activePresetKey === 'default'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100',
-              ]"
+              @click="isFilterModalOpen = false"
+              class="text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 p-2 rounded-xl transition"
             >
-              Default Filter
-            </button>
-
-            <!-- Built-in Preset: Show All -->
-            <button
-              @click="applyPreset('all')"
-              :class="[
-                'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border',
-                activePresetKey === 'all'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                  : 'bg-gray-50 text-gray-700 border-gray-200 hover:bg-gray-100',
-              ]"
-            >
-              Show All
-            </button>
-
-            <!-- Custom Presets list from localStorage -->
-            <div
-              v-for="preset in customPresets"
-              :key="preset.id"
-              class="relative group inline-flex items-center"
-            >
-              <button
-                @click="applyPreset(preset.id, preset)"
-                :class="[
-                  'px-3.5 py-1.5 pr-7 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5',
-                  activePresetKey === preset.id
-                    ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
-                    : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
-                ]"
+              <svg
+                class="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
-                ★ {{ preset.name }}
-              </button>
-              <button
-                @click="(e) => deleteCustomPreset(preset.id, e)"
-                title="Hapus Preset"
-                :class="[
-                  'absolute right-1.5 text-xs hover:text-red-600 transition p-0.5 rounded-full',
-                  activePresetKey === preset.id
-                    ? 'text-white/80 hover:text-white'
-                    : 'text-purple-400',
-                ]"
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Modal Body -->
+          <div class="p-6 space-y-6 overflow-y-auto">
+            <!-- Presets Section -->
+            <div>
+              <div class="flex items-center justify-between mb-2.5">
+                <span
+                  class="text-xs font-bold uppercase text-gray-400 tracking-wider"
+                  >Pilih Preset</span
+                >
+                <span class="text-[11px] text-gray-400"
+                  >Preset custom disimpan di localStorage</span
+                >
+              </div>
+              <div
+                class="flex flex-wrap items-center gap-2 bg-gray-50 p-3 rounded-2xl border border-gray-100"
               >
-                &times;
-              </button>
+                <!-- Built-in Preset: Default Filter -->
+                <button
+                  @click="applyPreset('default')"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border',
+                    activePresetKey === 'default'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100',
+                  ]"
+                >
+                  Default Filter
+                </button>
+
+                <!-- Built-in Preset: Show All -->
+                <button
+                  @click="applyPreset('all')"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border',
+                    activePresetKey === 'all'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100',
+                  ]"
+                >
+                  Show All
+                </button>
+
+                <!-- Custom Presets list from localStorage -->
+                <div
+                  v-for="preset in customPresets"
+                  :key="preset.id"
+                  class="relative group inline-flex items-center"
+                >
+                  <button
+                    @click="applyPreset(preset.id, preset)"
+                    :class="[
+                      'px-3.5 py-1.5 pr-8 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5',
+                      activePresetKey === preset.id
+                        ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                        : 'bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100',
+                    ]"
+                  >
+                    ★ {{ preset.name }}
+                  </button>
+                  <button
+                    @click="(e) => deleteCustomPreset(preset.id, e)"
+                    title="Hapus Preset"
+                    :class="[
+                      'absolute right-1.5 text-xs transition p-1 rounded-full',
+                      activePresetKey === preset.id
+                        ? 'text-white/80 hover:text-white'
+                        : 'text-purple-400 hover:text-red-500',
+                    ]"
+                  >
+                    &times;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Filter Inputs Grid -->
+            <div class="space-y-4">
+              <h3
+                class="text-xs font-bold uppercase text-gray-400 tracking-wider"
+              >
+                Kriteria Filter
+              </h3>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Organic Score -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Organic Score (≥)
+                  </label>
+                  <input
+                    v-model.number="filters.minOrganicScore"
+                    type="number"
+                    placeholder="60"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min Market Cap -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min MCap ($)
+                  </label>
+                  <input
+                    v-model.number="filters.minMarketCap"
+                    type="number"
+                    placeholder="250000"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Token Age (Hours) -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Token Age (Jam)
+                  </label>
+                  <input
+                    v-model.number="filters.maxTokenAgeHours"
+                    type="number"
+                    placeholder="5"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min Holders -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min Holders
+                  </label>
+                  <input
+                    v-model.number="filters.minHolders"
+                    type="number"
+                    placeholder="1000"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min Volume -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min Volume ($)
+                  </label>
+                  <input
+                    v-model.number="filters.minVolume"
+                    type="number"
+                    placeholder="5000"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min TVL -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min TVL ($)
+                  </label>
+                  <input
+                    v-model.number="filters.minTvl"
+                    type="number"
+                    placeholder="0"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min Active TVL -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min Active TVL ($)
+                  </label>
+                  <input
+                    v-model.number="filters.minActiveTvl"
+                    type="number"
+                    placeholder="5000"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Fee/Active TVL -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min Fee/Active TVL %
+                  </label>
+                  <input
+                    v-model.number="filters.minFeeActiveTvlRatio"
+                    type="number"
+                    placeholder="0"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+
+                <!-- Min Fee % -->
+                <div>
+                  <label class="block text-xs font-semibold text-gray-600 mb-1">
+                    Min Fee (%)
+                  </label>
+                  <input
+                    v-model.number="filters.minFeePct"
+                    type="number"
+                    placeholder="1"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
+                  />
+                </div>
+              </div>
+
+              <!-- Security & Status Toggles -->
+              <div
+                class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2"
+              >
+                <label
+                  class="flex items-center gap-2 cursor-pointer select-none bg-gray-50 p-2.5 rounded-xl border border-gray-200/80 hover:bg-gray-100 transition"
+                >
+                  <input
+                    v-model="filters.noHighSingleOwnership"
+                    type="checkbox"
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+                  />
+                  <span class="text-xs font-semibold text-gray-700">
+                    No High Single Ownership
+                  </span>
+                </label>
+
+                <label
+                  class="flex items-center gap-2 cursor-pointer select-none bg-gray-50 p-2.5 rounded-xl border border-gray-200/80 hover:bg-gray-100 transition"
+                >
+                  <input
+                    v-model="filters.newListing"
+                    type="checkbox"
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+                  />
+                  <span class="text-xs font-semibold text-gray-700">
+                    New Listing
+                  </span>
+                </label>
+
+                <label
+                  class="flex items-center gap-2 cursor-pointer select-none bg-gray-50 p-2.5 rounded-xl border border-gray-200/80 hover:bg-gray-100 transition"
+                >
+                  <input
+                    v-model="filters.noHighSupplyConcentration"
+                    type="checkbox"
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+                  />
+                  <span class="text-xs font-semibold text-gray-700">
+                    No High Supply Concentration
+                  </span>
+                </label>
+
+                <label
+                  class="flex items-center gap-2 cursor-pointer select-none bg-gray-50 p-2.5 rounded-xl border border-gray-200/80 hover:bg-gray-100 transition"
+                >
+                  <input
+                    v-model="filters.noCriticalWarnings"
+                    type="checkbox"
+                    class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
+                  />
+                  <span class="text-xs font-semibold text-gray-700">
+                    No Critical Warnings
+                  </span>
+                </label>
+              </div>
             </div>
           </div>
 
-          <!-- Add Preset Button -->
-          <button
-            @click="isModalOpen = true"
-            class="text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 px-3 py-1.5 rounded-xl border border-blue-200 transition flex items-center gap-1"
+          <!-- Modal Footer -->
+          <div
+            class="px-6 py-4 border-t border-gray-100 bg-gray-50/80 flex flex-col sm:flex-row items-center justify-between gap-3"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 4v16m8-8H4"
-              />
-            </svg>
-            Simpan Preset Ini
-          </button>
-        </div>
+            <div class="text-xs text-gray-500 flex items-center gap-1.5">
+              <span
+                class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
+              ></span>
+              <span>Filter otomatis diterapkan saat ada perubahan.</span>
+            </div>
 
-        <!-- Filter Input Grid -->
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4"
-        >
-          <!-- Organic Score -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Organic Score (≥)
-            </label>
-            <input
-              v-model.number="filters.minOrganicScore"
-              type="number"
-              placeholder="60"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
+            <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+              <!-- Update Preset (Hanya muncul jika preset aktif disimpan di localStorage) -->
+              <button
+                v-if="isCurrentPresetCustom"
+                @click="updateCurrentPreset"
+                class="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+              >
+                <svg
+                  class="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+                  />
+                </svg>
+                Update Preset Ini
+              </button>
+
+              <!-- Tombol Simpan Sebagai Preset Baru -->
+              <button
+                @click="isModalOpen = true"
+                class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
+              >
+                <svg
+                  class="w-3.5 h-3.5"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
+                  />
+                </svg>
+                Simpan Preset Baru
+              </button>
+
+              <!-- Close Modal -->
+              <button
+                @click="isFilterModalOpen = false"
+                class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold text-xs px-4 py-2 rounded-xl transition"
+              >
+                Tutup
+              </button>
+            </div>
           </div>
-
-          <!-- Min Market Cap -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min MCap ($)
-            </label>
-            <input
-              v-model.number="filters.minMarketCap"
-              type="number"
-              placeholder="250000"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!-- Token Age (Hours) -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Token Age (Jam)
-            </label>
-            <input
-              v-model.number="filters.maxTokenAgeHours"
-              type="number"
-              placeholder="5"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!-- Min Holders -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min Holders
-            </label>
-            <input
-              v-model.number="filters.minHolders"
-              type="number"
-              placeholder="1000"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!-- Min Volume -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min Volume ($)
-            </label>
-            <input
-              v-model.number="filters.minVolume"
-              type="number"
-              placeholder="5000"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!-- Min TVL -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min TVL ($)
-            </label>
-            <input
-              v-model.number="filters.minTvl"
-              type="number"
-              placeholder=""
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!-- Min Active TVL -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min Active TVL ($)
-            </label>
-            <input
-              v-model.number="filters.minActiveTvl"
-              type="number"
-              placeholder="5000"
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-
-          <!--Fee/Active TVL -->
-          <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">
-              Min Fee/Active TVL %
-            </label>
-            <input
-              v-model.number="filters.minFeeActiveTvlRatio"
-              type="number"
-              placeholder=""
-              class="w-full px-3 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none transition"
-            />
-          </div>
-        </div>
-
-        <div
-          class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4"
-        >
-          <!-- No High Single Ownership Checkbox -->
-          <div class="flex items-center pt-5">
-            <label
-              class="relative flex items-center gap-2 cursor-pointer select-none"
-            >
-              <input
-                v-model="filters.noHighSingleOwnership"
-                type="checkbox"
-                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
-              />
-              <span class="text-xs font-semibold text-gray-700">
-                No High Single Ownership
-              </span>
-            </label>
-          </div>
-
-          <div class="flex items-center pt-5">
-            <label
-              class="relative flex items-center gap-2 cursor-pointer select-none"
-            >
-              <input
-                v-model="filters.newListing"
-                type="checkbox"
-                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
-              />
-              <span class="text-xs font-semibold text-gray-700">
-                New Listing
-              </span>
-            </label>
-          </div>
-
-          <div class="flex items-center pt-5">
-            <label
-              class="relative flex items-center gap-2 cursor-pointer select-none"
-            >
-              <input
-                v-model="filters.noHighSupplyConcentration"
-                type="checkbox"
-                class="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 transition cursor-pointer"
-              />
-              <span class="text-xs font-semibold text-gray-700">
-                No High Supply Concentration
-              </span>
-            </label>
-          </div>
-        </div>
-
-        <div class="flex justify-end pt-2">
-          <button
-            @click="fetchTokenList"
-            class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition"
-          >
-            Terapkan Filter Manual
-          </button>
         </div>
       </div>
 
@@ -689,7 +902,9 @@ onMounted(() => {
                 d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
               />
             </svg>
-            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">
+            <span
+              class="text-xs font-bold text-gray-700 uppercase tracking-wider"
+            >
               History Screening
             </span>
             <span
@@ -721,7 +936,9 @@ onMounted(() => {
         </div>
 
         <!-- Horizontal Scroll Container Item History (Desain: Gambar, Address, Name Token) -->
-        <div class="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin">
+        <div
+          class="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin"
+        >
           <a
             v-for="item in screeningHistory"
             :key="item.address"
@@ -748,7 +965,7 @@ onMounted(() => {
               <span
                 class="text-xs font-bold text-gray-800 group-hover:text-blue-600 leading-tight truncate max-w-[110px]"
               >
-                {{ item.name || 'Unknown' }}
+                {{ item.name || "Unknown" }}
               </span>
 
               <!-- 3. Address Token -->
@@ -763,11 +980,25 @@ onMounted(() => {
       </div>
 
       <!-- Single Token Search Bar (Di Bawah Filter) -->
-      <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
+      <div
+        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3"
+      >
         <div class="relative w-full">
-          <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          <div
+            class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400"
+          >
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+              />
             </svg>
           </div>
           <input
@@ -782,8 +1013,18 @@ onMounted(() => {
             class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
             title="Hapus pencarian"
           >
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            <svg
+              class="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M6 18L18 6M6 6l12 12"
+              />
             </svg>
           </button>
         </div>
@@ -795,7 +1036,9 @@ onMounted(() => {
         >
           <div class="flex items-center gap-2 flex-wrap">
             <span class="font-bold">Hasil Pencarian Token:</span>
-            <span class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-mono text-[11px]">
+            <span
+              class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-mono text-[11px]"
+            >
               {{ searchToken }}
             </span>
             <span class="text-gray-500 text-[11px]">
@@ -815,7 +1058,6 @@ onMounted(() => {
       <div
         class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden"
       >
-
         <!-- Loading State -->
         <div v-if="isLoading" class="py-16 text-center text-gray-500">
           <div
