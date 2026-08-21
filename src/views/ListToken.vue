@@ -40,6 +40,8 @@ const filters = ref({ ...PRESET_DEFAULT });
 const activePresetKey = ref("default"); // 'default', 'all', atau ID custom preset
 const customPresets = ref([]);
 const searchToken = ref(""); // Single token search input
+const screeningHistory = ref([]); // History token screening dari sessionStorage
+
 
 // Computed property untuk filter instan di client side berdasarkan kolom data token
 const filteredPools = computed(() => {
@@ -324,8 +326,74 @@ const formatAge = (createdAt) => {
   return `${diffDays}d`;
 };
 
+// Helper & State Management History Screening (sessionStorage)
+const loadScreeningHistory = () => {
+  try {
+    const raw = sessionStorage.getItem("metvald_screening_history");
+    if (raw) {
+      screeningHistory.value = JSON.parse(raw);
+    } else {
+      screeningHistory.value = [];
+    }
+  } catch (e) {
+    console.error("Gagal membaca history screening dari sessionStorage:", e);
+    screeningHistory.value = [];
+  }
+};
+
+const saveScreeningToken = (tokenObj) => {
+  if (!tokenObj || !tokenObj.address) return;
+  try {
+    const raw = sessionStorage.getItem("metvald_screening_history");
+    let list = raw ? JSON.parse(raw) : [];
+
+    list = list.filter(
+      (item) => item.address?.toLowerCase() !== tokenObj.address.toLowerCase(),
+    );
+
+    list.unshift({
+      address: tokenObj.address,
+      name: tokenObj.name || tokenObj.symbol || "Unknown",
+      icon:
+        tokenObj.icon ||
+        tokenObj.image ||
+        "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png",
+    });
+
+    if (list.length > 20) {
+      list = list.slice(0, 20);
+    }
+
+    sessionStorage.setItem("metvald_screening_history", JSON.stringify(list));
+    screeningHistory.value = list;
+  } catch (e) {
+    console.error("Gagal menyimpan history screening:", e);
+  }
+};
+
+const clearScreeningHistory = () => {
+  sessionStorage.removeItem("metvald_screening_history");
+  screeningHistory.value = [];
+};
+
+const recordPoolScreening = (pool) => {
+  const baseToken = getBaseToken(pool);
+  const address = baseToken?.address || pool.pool_address;
+  if (!address) return;
+  const name = baseToken?.symbol || baseToken?.name || pool.name || "Unknown";
+  const icon = baseToken?.icon || pool.token_x?.icon || pool.token_y?.icon;
+  saveScreeningToken({ address, name, icon });
+};
+
+const truncateAddress = (addr) => {
+  if (!addr) return "";
+  if (addr.length <= 10) return addr;
+  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+};
+
 onMounted(() => {
   loadCustomPresets();
+  loadScreeningHistory();
   fetchTokenList();
 });
 </script>
@@ -652,6 +720,100 @@ onMounted(() => {
         </div>
       </div>
 
+      <!-- History Screening (Di Atas Pencarian) -->
+      <div
+        v-if="screeningHistory.length > 0"
+        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3"
+      >
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <svg
+              class="w-4 h-4 text-blue-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <span class="text-xs font-bold text-gray-700 uppercase tracking-wider">
+              History Screening
+            </span>
+            <span
+              class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full"
+            >
+              {{ screeningHistory.length }}
+            </span>
+          </div>
+          <button
+            @click="clearScreeningHistory"
+            class="text-[11px] text-gray-400 hover:text-red-500 transition cursor-pointer flex items-center gap-1 font-medium"
+            title="Hapus riwayat screening"
+          >
+            <svg
+              class="w-3.5 h-3.5"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+              />
+            </svg>
+            Hapus History
+          </button>
+        </div>
+
+        <!-- Horizontal Scroll Container Item History (Desain: Gambar, Address, Name Token) -->
+        <div class="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin">
+          <a
+            v-for="item in screeningHistory"
+            :key="item.address"
+            :href="`/screening?token=${item.address}`"
+            @click="saveScreeningToken(item)"
+            class="flex items-center gap-2.5 px-3 py-2 bg-gray-50 hover:bg-blue-50/80 border border-gray-200 hover:border-blue-300 rounded-xl transition flex-shrink-0 group shadow-2xs"
+            :title="`Screening ${item.name} (${item.address})`"
+          >
+            <!-- 1. Gambar -->
+            <img
+              :src="
+                item.icon ||
+                'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
+              "
+              :alt="item.name"
+              class="w-6 h-6 rounded-full object-cover bg-gray-200 ring-1 ring-black/5 flex-shrink-0"
+              @error="
+                $event.target.src =
+                  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
+              "
+            />
+
+            <div class="flex flex-col text-left">
+              <!-- 2. Name Token -->
+              <span
+                class="text-xs font-bold text-gray-800 group-hover:text-blue-600 leading-tight truncate max-w-[110px]"
+              >
+                {{ item.name || 'Unknown' }}
+              </span>
+
+              <!-- 3. Address Token -->
+              <span
+                class="text-[10px] font-mono text-gray-400 leading-tight truncate max-w-[110px]"
+              >
+                {{ truncateAddress(item.address) }}
+              </span>
+            </div>
+          </a>
+        </div>
+      </div>
+
       <!-- Single Token Search Bar (Di Bawah Filter) -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3">
         <div class="relative w-full">
@@ -963,6 +1125,7 @@ onMounted(() => {
                     <!-- Screening Link (New Tab) -->
                     <a
                       :href="`/screening?token=${getBaseToken(pool)?.address}`"
+                      @click="recordPoolScreening(pool)"
                       rel="noopener noreferrer"
                       class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded-lg shadow-xs transition"
                       title="Screening"
