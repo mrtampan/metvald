@@ -1191,7 +1191,7 @@ onMounted(() => {
                       <div class="flex items-center gap-0.5 mt-1.5">
                         <!-- Bubblemaps Link -->
                         <a
-                          :href="`https://v2.bubblemaps.io/map?address=${getBaseToken(pool)?.address || pool.pool_address}`"
+                          :href="`https://v2.bubblemaps.io/map?address=${getBaseToken(pool)?.address || pool.pool_address}&chain=solana`"
                           target="_blank"
                           rel="noopener noreferrer"
                           class="inline-flex items-center justify-center p-1 bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border border-yellow-200 rounded-md transition"
