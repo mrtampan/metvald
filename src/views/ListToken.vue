@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { watchDebounced } from "@vueuse/core";
 import { storeToRefs } from "pinia";
@@ -68,6 +68,46 @@ const filteredPools = computed(() => {
       poolName.includes(query)
     );
   });
+});
+
+// State & Computed Property Pagination
+const currentPage = ref(1);
+const itemsPerPage = ref(10); // Default 10 items per page
+
+const totalPages = computed(() => {
+  return Math.ceil(filteredPools.value.length / itemsPerPage.value) || 1;
+});
+
+const paginatedPools = computed(() => {
+  const start = (currentPage.value - 1) * itemsPerPage.value;
+  const end = start + itemsPerPage.value;
+  return filteredPools.value.slice(start, end);
+});
+
+const showingStart = computed(() => {
+  if (filteredPools.value.length === 0) return 0;
+  return (currentPage.value - 1) * itemsPerPage.value + 1;
+});
+
+const showingEnd = computed(() => {
+  return Math.min(
+    currentPage.value * itemsPerPage.value,
+    filteredPools.value.length,
+  );
+});
+
+const resetPagination = () => {
+  currentPage.value = 1;
+};
+
+const goToPage = (page) => {
+  if (page >= 1 && page <= totalPages.value) {
+    currentPage.value = page;
+  }
+};
+
+watch([itemsPerPage, searchToken], () => {
+  currentPage.value = 1;
 });
 
 // Watch searchToken menggunakan watchDebounced VueUse untuk auto refetch API saat input berubah
@@ -341,6 +381,7 @@ const fetchTokenList = async () => {
     const data = await res.json();
 
     pools.value = data.pools || data.data || [];
+    currentPage.value = 1;
   } catch (err) {
     console.error("Fetch error:", err);
     errorMessage.value = "Gagal mengambil data dari Meteora API.";
@@ -1107,7 +1148,7 @@ onMounted(() => {
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm">
               <tr
-                v-for="(pool, index) in filteredPools"
+                v-for="(pool, index) in paginatedPools"
                 :key="pool.pool_address || index"
                 class="hover:bg-gray-50 transition"
               >
@@ -1115,7 +1156,7 @@ onMounted(() => {
                 <td
                   class="py-3 px-4 text-center font-medium text-gray-400 text-xs"
                 >
-                  {{ index + 1 }}
+                  {{ (currentPage - 1) * itemsPerPage + index + 1 }}
                 </td>
 
                 <!-- Name Pair -->
@@ -1339,6 +1380,103 @@ onMounted(() => {
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- Pagination Controls Bar -->
+        <div
+          v-if="filteredPools.length > 0"
+          class="px-6 py-4 border-t border-gray-200 bg-gray-50/50 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <!-- Items per page & Showing info -->
+          <div class="flex items-center gap-4 text-xs text-gray-500">
+            <div class="flex items-center gap-2">
+              <span>Tampilkan</span>
+              <select
+                v-model.number="itemsPerPage"
+                @change="resetPagination"
+                class="bg-white border border-gray-300 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-700 focus:ring-2 focus:ring-blue-500 focus:outline-none transition cursor-pointer"
+              >
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+              </select>
+              <span>per halaman</span>
+            </div>
+            <span class="hidden md:inline text-gray-300">|</span>
+            <div>
+              Menampilkan
+              <span class="font-bold text-gray-800">{{ showingStart }}</span>
+              -
+              <span class="font-bold text-gray-800">{{ showingEnd }}</span>
+              dari
+              <span class="font-bold text-gray-800">{{ filteredPools.length }}</span>
+              pool
+            </div>
+          </div>
+
+          <!-- Page Navigation Buttons -->
+          <div class="flex items-center gap-1">
+            <!-- Previous Button -->
+            <button
+              @click="goToPage(currentPage - 1)"
+              :disabled="currentPage === 1"
+              class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M15 19l-7-7 7-7"
+                />
+              </svg>
+              <span>Prev</span>
+            </button>
+
+            <!-- Page Numbers -->
+            <div class="flex items-center gap-1 px-1">
+              <button
+                v-for="page in totalPages"
+                :key="page"
+                @click="goToPage(page)"
+                :class="[
+                  'px-3 py-1.5 text-xs font-semibold rounded-lg transition cursor-pointer',
+                  currentPage === page
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200',
+                ]"
+              >
+                {{ page }}
+              </button>
+            </div>
+
+            <!-- Next Button -->
+            <button
+              @click="goToPage(currentPage + 1)"
+              :disabled="currentPage === totalPages"
+              class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
+            >
+              <span>Next</span>
+              <svg
+                class="w-3.5 h-3.5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </div>
