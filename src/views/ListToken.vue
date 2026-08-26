@@ -70,29 +70,115 @@ const filteredPools = computed(() => {
   });
 });
 
+// State & Computed Property Sorting Header Table
+const sortKey = ref("");
+const sortOrder = ref("desc"); // 'asc' atau 'desc'
+
+const sortBy = (key) => {
+  if (sortKey.value === key) {
+    if (sortOrder.value === "desc") {
+      sortOrder.value = "asc";
+    } else {
+      sortKey.value = "";
+      sortOrder.value = "desc";
+    }
+  } else {
+    sortKey.value = key;
+    sortOrder.value = key === "name" ? "asc" : "desc";
+  }
+  currentPage.value = 1;
+};
+
+const sortedPools = computed(() => {
+  if (!sortKey.value) {
+    return filteredPools.value;
+  }
+
+  return [...filteredPools.value].sort((a, b) => {
+    let valA, valB;
+
+    switch (sortKey.value) {
+      case "name":
+        valA = (
+          a.name || `${a.token_x?.symbol || ""}-${a.token_y?.symbol || ""}`
+        ).toLowerCase();
+        valB = (
+          b.name || `${b.token_x?.symbol || ""}-${b.token_y?.symbol || ""}`
+        ).toLowerCase();
+        return sortOrder.value === "asc"
+          ? valA.localeCompare(valB)
+          : valB.localeCompare(valA);
+
+      case "positions_created":
+        valA = Number(a.positions_created || 0);
+        valB = Number(b.positions_created || 0);
+        break;
+
+      case "volume_active_tvl_ratio":
+        valA = Number(
+          a.volume_active_tvl_ratio ||
+            (a.active_tvl ? a.volume / a.active_tvl : 0),
+        );
+        valB = Number(
+          b.volume_active_tvl_ratio ||
+            (b.active_tvl ? b.volume / b.active_tvl : 0),
+        );
+        break;
+
+      case "fee":
+        valA = Number(a.fee || 0);
+        valB = Number(b.fee || 0);
+        break;
+
+      case "created_at":
+        valA = Number(getBaseToken(a)?.created_at || a.pool_created_at || 0);
+        valB = Number(getBaseToken(b)?.created_at || b.pool_created_at || 0);
+        break;
+
+      case "market_cap":
+        valA = Number(
+          getBaseToken(a)?.market_cap || a.base_token_market_cap || 0,
+        );
+        valB = Number(
+          getBaseToken(b)?.market_cap || b.base_token_market_cap || 0,
+        );
+        break;
+
+      default:
+        return 0;
+    }
+
+    if (sortOrder.value === "asc") {
+      return valA > valB ? 1 : valA < valB ? -1 : 0;
+    } else {
+      return valA < valB ? 1 : valA > valB ? -1 : 0;
+    }
+  });
+});
+
 // State & Computed Property Pagination
 const currentPage = ref(1);
 const itemsPerPage = ref(10); // Default 10 items per page
 
 const totalPages = computed(() => {
-  return Math.ceil(filteredPools.value.length / itemsPerPage.value) || 1;
+  return Math.ceil(sortedPools.value.length / itemsPerPage.value) || 1;
 });
 
 const paginatedPools = computed(() => {
   const start = (currentPage.value - 1) * itemsPerPage.value;
   const end = start + itemsPerPage.value;
-  return filteredPools.value.slice(start, end);
+  return sortedPools.value.slice(start, end);
 });
 
 const showingStart = computed(() => {
-  if (filteredPools.value.length === 0) return 0;
+  if (sortedPools.value.length === 0) return 0;
   return (currentPage.value - 1) * itemsPerPage.value + 1;
 });
 
 const showingEnd = computed(() => {
   return Math.min(
     currentPage.value * itemsPerPage.value,
-    filteredPools.value.length,
+    sortedPools.value.length,
   );
 });
 
@@ -106,7 +192,7 @@ const goToPage = (page) => {
   }
 };
 
-watch([itemsPerPage, searchToken], () => {
+watch([itemsPerPage, searchToken, sortKey, sortOrder], () => {
   currentPage.value = 1;
 });
 
@@ -1134,15 +1220,312 @@ onMounted(() => {
           <table class="w-full text-left border-collapse">
             <thead>
               <tr
-                class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider"
+                class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wider select-none"
               >
                 <th class="py-3 px-4 text-center w-12">#</th>
-                <th class="py-3 px-4">Name Pair</th>
-                <th class="py-3 px-4">Position Created</th>
-                <th class="py-3 px-4">Volume / Active TVL</th>
-                <th class="py-3 px-4">Fees</th>
-                <th class="py-3 px-4">Token Age</th>
-                <th class="py-3 px-4">MarketCap</th>
+
+                <!-- Name Pair -->
+                <th
+                  @click="sortBy('name')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50': sortKey === 'name',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan nama"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>Name Pair</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'name'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="sortKey === 'name' && sortOrder === 'asc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="sortKey === 'name' && sortOrder === 'desc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- Position Created -->
+                <th
+                  @click="sortBy('positions_created')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50':
+                      sortKey === 'positions_created',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan posisi yang dibuat"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>Position Created</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'positions_created'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="
+                          sortKey === 'positions_created' && sortOrder === 'asc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="
+                          sortKey === 'positions_created' &&
+                          sortOrder === 'desc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- Volume / Active TVL -->
+                <th
+                  @click="sortBy('volume_active_tvl_ratio')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50':
+                      sortKey === 'volume_active_tvl_ratio',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan rasio Volume / Active TVL"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>Volume / Active TVL</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'volume_active_tvl_ratio'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="
+                          sortKey === 'volume_active_tvl_ratio' &&
+                          sortOrder === 'asc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="
+                          sortKey === 'volume_active_tvl_ratio' &&
+                          sortOrder === 'desc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- Fees -->
+                <th
+                  @click="sortBy('fee')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50': sortKey === 'fee',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan fee"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>Fees</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'fee'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="sortKey === 'fee' && sortOrder === 'asc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="sortKey === 'fee' && sortOrder === 'desc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- Token Age -->
+                <th
+                  @click="sortBy('created_at')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50':
+                      sortKey === 'created_at',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan umur token"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>Token Age</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'created_at'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="sortKey === 'created_at' && sortOrder === 'asc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="
+                          sortKey === 'created_at' && sortOrder === 'desc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- MarketCap -->
+                <th
+                  @click="sortBy('market_cap')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100/80 transition group"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50':
+                      sortKey === 'market_cap',
+                  }"
+                  title="Klik untuk mengurutkan berdasarkan market cap"
+                >
+                  <div class="flex items-center gap-1.5">
+                    <span>MarketCap</span>
+                    <svg
+                      class="w-3.5 h-3.5 transition-colors"
+                      :class="
+                        sortKey === 'market_cap'
+                          ? 'text-blue-600'
+                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                      "
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        v-if="sortKey === 'market_cap' && sortOrder === 'asc'"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M5 15l7-7 7 7"
+                      />
+                      <path
+                        v-else-if="
+                          sortKey === 'market_cap' && sortOrder === 'desc'
+                        "
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2.5"
+                        d="M19 9l-7 7-7-7"
+                      />
+                      <path
+                        v-else
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
+                      />
+                    </svg>
+                  </div>
+                </th>
+
+                <!-- Action -->
                 <th class="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
