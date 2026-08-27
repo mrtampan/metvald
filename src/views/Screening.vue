@@ -15,6 +15,9 @@ const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
+const meteoraPools = ref([]);
+const meteoraSortKey = ref("");
+const meteoraSortOrder = ref("desc");
 const holderProfiles = ref([]);
 const submittedAddress = ref("");
 const holdersData = ref([]);
@@ -214,6 +217,107 @@ const formatAge = (createdAt) => {
   return `${diffDays}d`;
 };
 
+const getPoolTargetToken = (pool) => {
+  if (!pool) return null;
+  const addr = submittedAddress.value?.toLowerCase();
+  if (pool.token_x?.address?.toLowerCase() === addr) return pool.token_x;
+  if (pool.token_y?.address?.toLowerCase() === addr) return pool.token_y;
+  return pool.token_x || pool.token_y;
+};
+
+const getPoolMarketCap = (pool) => {
+  const token = getPoolTargetToken(pool);
+  return (
+    token?.market_cap ||
+    pool.token_x?.market_cap ||
+    pool.token_y?.market_cap ||
+    0
+  );
+};
+
+const sortMeteoraBy = (key) => {
+  if (meteoraSortKey.value === key) {
+    if (meteoraSortOrder.value === "desc") {
+      meteoraSortOrder.value = "asc";
+    } else {
+      meteoraSortKey.value = "";
+      meteoraSortOrder.value = "desc";
+    }
+  } else {
+    meteoraSortKey.value = key;
+    meteoraSortOrder.value =
+      key === "name" || key === "pool_type" ? "asc" : "desc";
+  }
+};
+
+const sortedMeteoraPools = computed(() => {
+  if (!meteoraSortKey.value) return meteoraPools.value;
+
+  return [...meteoraPools.value].sort((a, b) => {
+    let valA, valB;
+    switch (meteoraSortKey.value) {
+      case "name":
+        valA = (a.name || "").toLowerCase();
+        valB = (b.name || "").toLowerCase();
+        break;
+      case "pool_type":
+        valA = (a.pool_type || "").toLowerCase();
+        valB = (b.pool_type || "").toLowerCase();
+        break;
+      case "open_positions":
+        valA = a.open_positions ?? 0;
+        valB = b.open_positions ?? 0;
+        break;
+      case "active_positions":
+        valA = a.active_positions ?? 0;
+        valB = b.active_positions ?? 0;
+        break;
+      case "positions_created":
+        valA = a.positions_created ?? 0;
+        valB = b.positions_created ?? 0;
+        break;
+      case "total_lps":
+        valA = a.total_lps ?? 0;
+        valB = b.total_lps ?? 0;
+        break;
+      case "unique_lps":
+        valA = a.unique_lps ?? 0;
+        valB = b.unique_lps ?? 0;
+        break;
+      case "volume":
+        valA = a.volume ?? 0;
+        valB = b.volume ?? 0;
+        break;
+      case "tvl":
+        valA = a.tvl ?? 0;
+        valB = b.tvl ?? 0;
+        break;
+      case "active_tvl":
+        valA = a.active_tvl ?? 0;
+        valB = b.active_tvl ?? 0;
+        break;
+      case "base_fee":
+        valA = a.fee_pct ?? 0;
+        valB = b.fee_pct ?? 0;
+        break;
+      case "bin_step":
+        valA = a.dlmm_params?.bin_step ?? 0;
+        valB = b.dlmm_params?.bin_step ?? 0;
+        break;
+      case "marketcap":
+        valA = getPoolMarketCap(a);
+        valB = getPoolMarketCap(a);
+        break;
+      default:
+        return 0;
+    }
+
+    if (valA < valB) return meteoraSortOrder.value === "asc" ? -1 : 1;
+    if (valA > valB) return meteoraSortOrder.value === "asc" ? 1 : -1;
+    return 0;
+  });
+});
+
 const fetchScreeningData = async () => {
   const address = token.value.trim();
 
@@ -229,6 +333,7 @@ const fetchScreeningData = async () => {
   riskDetails.value = null;
   dexscreenerData.value = null;
   meteoraData.value = null;
+  meteoraPools.value = [];
   holderProfiles.value = [];
   holdersData.value = [];
   totalHoldersCount.value = 0;
@@ -372,6 +477,7 @@ const fetchScreeningData = async () => {
       if (meteoraRes.ok) {
         const meteoraJson = await meteoraRes.json();
         const pools = meteoraJson.data || meteoraJson.pools || [];
+        meteoraPools.value = pools;
         if (pools.length > 0) {
           const item = pools[0];
           const targetToken =
@@ -423,6 +529,7 @@ const fetchScreeningData = async () => {
     riskDetails.value = null;
     dexscreenerData.value = null;
     meteoraData.value = null;
+    meteoraPools.value = [];
     holderProfiles.value = null;
     holdersData.value = [];
     totalHoldersCount.value = 0;
@@ -1219,6 +1326,335 @@ watch(
               {{ formatCurrency(meteoraData.volume) }}
             </p>
           </div>
+        </div>
+      </div>
+
+      <!-- Meteora Pool List Card -->
+      <div
+        v-if="meteoraPools.length"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-cyan-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"
+              />
+            </svg>
+            Meteora Pool List
+          </h2>
+          <span
+            class="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full"
+          >
+            {{ meteoraPools.length }}
+            {{ meteoraPools.length === 1 ? "Pool" : "Pools" }} Found
+          </span>
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto rounded-xl border border-gray-200">
+          <table class="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr
+                class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none"
+              >
+                <!-- Name -->
+                <th
+                  @click="sortMeteoraBy('name')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition"
+                >
+                  <div class="flex items-center gap-1">
+                    Name
+                    <span v-if="meteoraSortKey === 'name'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Base Fee -->
+                <th
+                  @click="sortMeteoraBy('base_fee')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Base Fee
+                    <span v-if="meteoraSortKey === 'base_fee'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Bin Step -->
+                <th
+                  @click="sortMeteoraBy('bin_step')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Bin Step
+                    <span v-if="meteoraSortKey === 'bin_step'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Open / Active Pos -->
+                <th
+                  @click="sortMeteoraBy('open_positions')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Open / Active Pos
+                    <span v-if="meteoraSortKey === 'open_positions'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Total / Unique LPs -->
+                <th
+                  @click="sortMeteoraBy('total_lps')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Total / Unique LPs
+                    <span v-if="meteoraSortKey === 'total_lps'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Volume -->
+                <th
+                  @click="sortMeteoraBy('volume')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Volume
+                    <span v-if="meteoraSortKey === 'volume'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- TVL -->
+                <th
+                  @click="sortMeteoraBy('tvl')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    TVL
+                    <span v-if="meteoraSortKey === 'tvl'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Active TVL -->
+                <th
+                  @click="sortMeteoraBy('active_tvl')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Active TVL
+                    <span v-if="meteoraSortKey === 'active_tvl'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Market Cap -->
+                <th
+                  @click="sortMeteoraBy('marketcap')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Market Cap
+                    <span v-if="meteoraSortKey === 'marketcap'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Pos Created -->
+                <th
+                  @click="sortMeteoraBy('positions_created')"
+                  class="py-3 px-4 cursor-pointer hover:bg-gray-100 transition text-right"
+                >
+                  <div class="flex items-center justify-end gap-1">
+                    Pos Created
+                    <span v-if="meteoraSortKey === 'positions_created'">{{
+                      meteoraSortOrder === "asc" ? "▲" : "▼"
+                    }}</span>
+                  </div>
+                </th>
+
+                <!-- Action -->
+                <th class="py-3 px-4 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody
+              class="divide-y divide-gray-100 text-xs font-medium text-gray-700"
+            >
+              <tr
+                v-for="(pool, idx) in sortedMeteoraPools"
+                :key="pool.pool_address || idx"
+                class="hover:bg-gray-50/80 transition"
+              >
+                <!-- Name -->
+                <td class="py-3 px-4 font-semibold text-gray-900">
+                  {{ pool.name || "Unknown" }}
+                </td>
+
+                <!-- Base Fee -->
+                <td class="py-3 px-4 text-right font-mono">
+                  <span
+                    class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-50 text-gray-700 border border-gray-300"
+                  >
+                    {{ pool.fee_pct != null ? pool.fee_pct + "%" : "N/A" }}
+                  </span>
+                </td>
+
+                <!-- Bin Step -->
+                <td class="py-3 px-4 text-right font-mono">
+                  <span
+                    class="inline-block px-2 py-0.5 rounded text-[11px] font-semibold bg-gray-50 text-gray-700 border border-gray-300"
+                  >
+                    {{
+                      pool.dlmm_params?.bin_step != null
+                        ? pool.dlmm_params.bin_step
+                        : "N/A"
+                    }}
+                  </span>
+                </td>
+
+                <!-- Open / Active Pos -->
+                <td class="py-3 px-4 text-right font-mono">
+                  {{
+                    pool.open_positions != null
+                      ? pool.open_positions.toLocaleString("en-US")
+                      : "0"
+                  }}
+                  /
+                  {{
+                    pool.active_positions != null
+                      ? pool.active_positions.toLocaleString("en-US")
+                      : "0"
+                  }}
+                </td>
+
+                <!-- Total / Unique LPs -->
+                <td class="py-3 px-4 text-right font-mono">
+                  {{
+                    pool.total_lps != null
+                      ? pool.total_lps.toLocaleString("en-US")
+                      : "0"
+                  }}
+                  /
+                  {{
+                    pool.unique_lps != null
+                      ? pool.unique_lps.toLocaleString("en-US")
+                      : "0"
+                  }}
+                </td>
+
+                <!-- Volume -->
+                <td
+                  :class="[
+                    'py-3 px-4 text-right font-mono font-semibold',
+                    (pool.volume || 0) >= 100000
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-red-600',
+                  ]"
+                >
+                  {{ formatCurrency(pool.volume) }}
+                </td>
+
+                <!-- TVL -->
+                <td
+                  :class="[
+                    'py-3 px-4 text-right font-mono font-semibold',
+                    (pool.tvl || 0) >= 50000
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-red-600',
+                  ]"
+                >
+                  {{ formatCurrency(pool.tvl) }}
+                </td>
+
+                <!-- Active TVL -->
+                <td
+                  class="py-3 px-4 text-right font-mono font-semibold text-emerald-600"
+                >
+                  {{ formatCurrency(pool.active_tvl) }}
+                </td>
+
+                <!-- Market Cap -->
+                <td
+                  :class="[
+                    'py-3 px-4 text-right font-mono font-semibold',
+                    getPoolMarketCap(pool) >= 250000
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-red-600',
+                  ]"
+                >
+                  {{ formatCurrency(getPoolMarketCap(pool)) }}
+                </td>
+
+                <!-- Positions Created -->
+                <td class="py-3 px-4 text-right font-mono">
+                  {{
+                    pool.positions_created != null
+                      ? pool.positions_created.toLocaleString("en-US")
+                      : "N/A"
+                  }}
+                </td>
+
+                <!-- Action (Pool Type Link) -->
+                <td class="py-3 px-4 text-center">
+                  <a
+                    v-if="pool.pool_address"
+                    :href="
+                      pool.pool_type?.toLowerCase() === 'dlmm'
+                        ? `https://app.meteora.ag/dlmm/${pool.pool_address}`
+                        : `https://app.meteora.ag/pools/${pool.pool_address}`
+                    "
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border border-cyan-300 transition shadow-xs"
+                  >
+                    {{ pool.pool_type || "N/A" }}
+                    <svg
+                      class="w-3 h-3 text-cyan-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                      />
+                    </svg>
+                  </a>
+                  <span
+                    v-else
+                    class="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-gray-100 text-gray-500 border border-gray-200"
+                  >
+                    {{ pool.pool_type || "N/A" }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
