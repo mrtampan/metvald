@@ -472,7 +472,7 @@ const fetchScreeningData = async () => {
     // Fetch Meteora Data
     try {
       const filterByQuery = `(token_x=${address}||token_y=${address})`;
-      const meteoraUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h&category=top&filter_by=${encodeURIComponent(filterByQuery)}`;
+      const meteoraUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=24h&category=top&filter_by=${encodeURIComponent(filterByQuery)}`;
       const meteoraRes = await fetch(meteoraUrl);
       if (meteoraRes.ok) {
         const meteoraJson = await meteoraRes.json();
@@ -1163,6 +1163,82 @@ watch(
         </div>
       </div>
 
+      <!-- Rugcheck Data Card -->
+      <div
+        v-if="rugcheckData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
+      >
+        <h2 class="text-lg font-bold text-gray-900">Rugcheck Data</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+          <!-- Combined Score & Risk Status Card -->
+          <div
+            :class="[
+              'p-3.5 rounded-xl border flex flex-col justify-between',
+              getRiskLevel(rugcheckData.score).color,
+            ]"
+          >
+            <div>
+              <p
+                class="text-[11px] font-semibold uppercase tracking-wider mb-1.5 opacity-80"
+              >
+                Score & Risk Status
+              </p>
+              <div class="flex items-baseline justify-between mt-0.5">
+                <div>
+                  <span class="text-2xl font-bold">{{
+                    rugcheckData.score
+                  }}</span>
+                  <span class="text-xs text-gray-500 ml-1">/ 100</span>
+                </div>
+                <span class="text-base font-bold">
+                  {{ getRiskLevel(rugcheckData.score).level }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Risk List on the Right -->
+          <div>
+            <div v-if="rugcheckData.risk && rugcheckData.risk.length > 0">
+              <h3 class="text-xs font-bold text-gray-700 mb-2">
+                Detected Risks:
+              </h3>
+              <ul class="space-y-1.5">
+                <li
+                  v-for="(risk, index) in rugcheckData.risk"
+                  :key="index"
+                  class="flex items-start text-xs text-gray-700 bg-red-50/50 p-2 rounded-lg border border-red-100"
+                >
+                  <svg
+                    class="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                  <span>{{
+                    typeof risk === "string"
+                      ? risk
+                      : risk.name || "Unknown risk"
+                  }}</span>
+                </li>
+              </ul>
+            </div>
+            <div
+              v-else
+              class="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold"
+            >
+              ✓ No risks detected
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Meteora Data Card -->
       <div
         v-if="meteoraData"
@@ -1658,81 +1734,7 @@ watch(
         </div>
       </div>
 
-      <!-- Rugcheck Data Card -->
-      <div
-        v-if="rugcheckData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
-      >
-        <h2 class="text-lg font-bold text-gray-900">Rugcheck Data</h2>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
-          <!-- Combined Score & Risk Status Card -->
-          <div
-            :class="[
-              'p-3.5 rounded-xl border flex flex-col justify-between',
-              getRiskLevel(rugcheckData.score).color,
-            ]"
-          >
-            <div>
-              <p
-                class="text-[11px] font-semibold uppercase tracking-wider mb-1.5 opacity-80"
-              >
-                Score & Risk Status
-              </p>
-              <div class="flex items-baseline justify-between mt-0.5">
-                <div>
-                  <span class="text-2xl font-bold">{{
-                    rugcheckData.score
-                  }}</span>
-                  <span class="text-xs text-gray-500 ml-1">/ 100</span>
-                </div>
-                <span class="text-base font-bold">
-                  {{ getRiskLevel(rugcheckData.score).level }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Risk List on the Right -->
-          <div>
-            <div v-if="rugcheckData.risk && rugcheckData.risk.length > 0">
-              <h3 class="text-xs font-bold text-gray-700 mb-2">
-                Detected Risks:
-              </h3>
-              <ul class="space-y-1.5">
-                <li
-                  v-for="(risk, index) in rugcheckData.risk"
-                  :key="index"
-                  class="flex items-start text-xs text-gray-700 bg-red-50/50 p-2 rounded-lg border border-red-100"
-                >
-                  <svg
-                    class="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5"
-                    fill="currentColor"
-                    viewBox="0 0 20 20"
-                  >
-                    <path
-                      fill-rule="evenodd"
-                      d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                      clip-rule="evenodd"
-                    />
-                  </svg>
-                  <span>{{
-                    typeof risk === "string"
-                      ? risk
-                      : risk.name || "Unknown risk"
-                  }}</span>
-                </li>
-              </ul>
-            </div>
-            <div
-              v-else
-              class="p-3 bg-green-50 border border-green-200 rounded-xl text-green-800 text-xs font-semibold"
-            >
-              ✓ No risks detected
-            </div>
-          </div>
-        </div>
-      </div>
 
       <!-- Extend Analytics Card (Placed above Token Holders) -->
       <div
