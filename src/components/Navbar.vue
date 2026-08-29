@@ -16,10 +16,10 @@
             Home
           </RouterLink>
           <RouterLink
-            to="/list-token"
+            to="/token-list"
             class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium"
           >
-            List Token
+            Token List
           </RouterLink>
           <RouterLink
             to="/check-token"
@@ -85,10 +85,10 @@
           Home
         </RouterLink>
         <RouterLink
-          to="/list-token"
+          to="/token-list"
           class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
         >
-          List Token
+          Token List
         </RouterLink>
         <RouterLink
           to="/dexscreener-list"

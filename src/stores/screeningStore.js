@@ -67,7 +67,7 @@ export const useScreeningStore = defineStore("screening", () => {
     screeningHistory.value = [];
   };
 
-  // Helper untuk record pool dari ListToken
+  // Helper untuk record pool dari TokenList
   const recordPoolScreening = (pool, getBaseTokenFn) => {
     if (!pool) return;
     const baseToken = getBaseTokenFn ? getBaseTokenFn(pool) : (pool.token_x || pool.token_y || {});

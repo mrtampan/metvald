@@ -57,7 +57,7 @@
               Dexscreener List
             </RouterLink>
             <RouterLink
-              to="/list-token"
+              to="/token-list"
               class="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium px-3 py-1.5 rounded-lg transition"
             >
               Token List

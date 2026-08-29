@@ -682,7 +682,7 @@ const getRiskInsiderLevel = (count) => {
 };
 
 const goBack = () => {
-  router.push({ name: "list-token" });
+  router.push({ name: "token-list" });
 };
 
 const handleTokenSubmit = () => {
