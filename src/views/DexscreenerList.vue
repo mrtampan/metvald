@@ -127,7 +127,7 @@ const fetchTokens = async () => {
     pairs.value = Array.from(pairMap.values());
   } catch (err) {
     console.error("Error loading Dexscreener list:", err);
-    errorMessage.value = "Gagal memuat data dari Dexscreener API.";
+    errorMessage.value = "Failed to load data from Dexscreener API.";
   } finally {
     isLoading.value = false;
   }
@@ -185,9 +185,9 @@ const copyAddress = async (address) => {
   if (!address) return;
   try {
     await navigator.clipboard.writeText(address);
-    triggerToast("Alamat kontrak berhasil disalin!");
+    triggerToast("Contract address copied successfully!");
   } catch (e) {
-    triggerToast("Gagal menyalin.");
+    triggerToast("Failed to copy.");
   }
 };
 
@@ -221,12 +221,12 @@ onMounted(() => {
               DexScreener Live API
             </span>
             <span class="bg-emerald-100 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded-full flex items-center gap-1">
-              <span>✓</span> Profile Centang Active
+              <span>✓</span> Verified Profile Active
             </span>
           </div>
           <h1 class="text-2xl font-bold text-gray-900">Dexscreener Token List</h1>
           <p class="text-sm text-gray-500 mt-0.5">
-            Daftar token dari API Dexscreener terfilter: Market Cap ≥ $250k, Profile Centang, Solana, 24h Vol ≥ $1M, & 5m Vol ≥ $5k.
+            Filtered token list from Dexscreener API: Market Cap ≥ $250k, Verified Profile, Solana, 24h Vol ≥ $1M, & 5m Vol ≥ $5k.
           </p>
         </div>
 
@@ -244,12 +244,12 @@ onMounted(() => {
 
       <!-- Filter Controls Card -->
       <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 space-y-4">
-        <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Filter Token</h2>
+        <h2 class="text-sm font-bold text-gray-700 uppercase tracking-wider">Token Filters</h2>
         
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <!-- Market Cap -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">Market Cap Min ($)</label>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Min Market Cap ($)</label>
             <input
               type="number"
               v-model.number="filters.minMarketCap"
@@ -260,7 +260,7 @@ onMounted(() => {
 
           <!-- 24h Volume -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">24h Volume Min ($)</label>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Min 24h Volume ($)</label>
             <input
               type="number"
               v-model.number="filters.minVolume24h"
@@ -271,7 +271,7 @@ onMounted(() => {
 
           <!-- 5m Volume -->
           <div>
-            <label class="block text-xs font-semibold text-gray-600 mb-1">5m Volume Min ($)</label>
+            <label class="block text-xs font-semibold text-gray-600 mb-1">Min 5m Volume ($)</label>
             <input
               type="number"
               v-model.number="filters.minVolume5m"
@@ -301,7 +301,7 @@ onMounted(() => {
               class="w-full cursor-pointer bg-blue-50 border border-blue-200 rounded-xl px-3 py-2 text-sm font-semibold text-blue-700 flex items-center justify-between select-none"
             >
               <span class="flex items-center gap-1.5 text-xs">
-                <span class="text-blue-600 font-bold">✓</span> Profile Centang
+                <span class="text-blue-600 font-bold">✓</span> Verified Profile
               </span>
               <input
                 type="checkbox"
@@ -317,12 +317,12 @@ onMounted(() => {
           <input
             type="text"
             v-model="searchQuery"
-            placeholder="Cari nama token / simbol / address..."
+            placeholder="Search token name / symbol / address..."
             class="w-full sm:w-80 bg-gray-50 border border-gray-300 rounded-xl px-3 py-2 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
 
           <span class="text-xs text-gray-500 font-medium">
-            Menampilkan <strong class="text-gray-900">{{ filteredTokens.length }}</strong> dari {{ pairs.length }} token
+            Showing <strong class="text-gray-900">{{ filteredTokens.length }}</strong> of {{ pairs.length }} tokens
           </span>
         </div>
       </div>
@@ -330,7 +330,7 @@ onMounted(() => {
       <!-- Loading State -->
       <div v-if="isLoading" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
         <div class="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-        <p class="text-gray-600 text-sm font-medium">Memuat token dari Dexscreener API...</p>
+        <p class="text-gray-600 text-sm font-medium">Loading tokens from Dexscreener API...</p>
       </div>
 
       <!-- Error State -->
@@ -340,15 +340,15 @@ onMounted(() => {
 
       <!-- Empty State -->
       <div v-else-if="filteredTokens.length === 0" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center space-y-3">
-        <p class="text-gray-500 font-medium">Tidak ada token yang memenuhi kriteria filter saat ini.</p>
+        <p class="text-gray-500 font-medium">No tokens match the current filter criteria.</p>
         <p class="text-xs text-gray-400">
-          Syarat filter saat ini: Market Cap ≥ {{ formatUsd(filters.minMarketCap) }}, 24h Vol ≥ {{ formatUsd(filters.minVolume24h) }}, 5m Vol ≥ {{ formatUsd(filters.minVolume5m) }}, Chain: {{ filters.chain }}.
+          Current filter criteria: Market Cap ≥ {{ formatUsd(filters.minMarketCap) }}, 24h Vol ≥ {{ formatUsd(filters.minVolume24h) }}, 5m Vol ≥ {{ formatUsd(filters.minVolume5m) }}, Chain: {{ filters.chain }}.
         </p>
         <button
           @click="filters.minMarketCap = 0; filters.minVolume24h = 0; filters.minVolume5m = 0;"
           class="bg-blue-50 text-blue-600 hover:bg-blue-100 text-xs font-semibold px-4 py-2 rounded-xl transition"
         >
-          Reset Batas Minimum
+          Reset Minimum Limits
         </button>
       </div>
 
@@ -359,13 +359,13 @@ onMounted(() => {
             <thead>
               <tr class="bg-gray-50 border-b border-gray-200 text-xs font-bold text-gray-500 uppercase">
                 <th class="py-3.5 px-4">Token</th>
-                <th class="py-3.5 px-4 text-right">Harga</th>
+                <th class="py-3.5 px-4 text-right">Price</th>
                 <th class="py-3.5 px-4 text-right">Market Cap</th>
                 <th class="py-3.5 px-4 text-right">24h Volume</th>
                 <th class="py-3.5 px-4 text-right">5m Volume</th>
                 <th class="py-3.5 px-4 text-right">24h Change</th>
                 <th class="py-3.5 px-4 text-center">Profile</th>
-                <th class="py-3.5 px-4 text-center">Aksi</th>
+                <th class="py-3.5 px-4 text-center">Action</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 text-sm">
@@ -384,7 +384,7 @@ onMounted(() => {
                       <span
                         v-if="checkHasProfile(item)"
                         class="absolute -top-1 -right-1 bg-blue-600 text-white rounded-full p-0.5 shadow-sm"
-                        title="Profile Centang Terverifikasi"
+                        title="Verified Profile"
                       >
                         <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                           <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
@@ -398,7 +398,7 @@ onMounted(() => {
                         <button
                           @click="copyAddress(item.baseToken?.address)"
                           class="text-gray-400 hover:text-blue-600 text-xs"
-                          title="Salin Alamat Kontrak"
+                          title="Copy Contract Address"
                         >
                           📋
                         </button>
@@ -448,7 +448,7 @@ onMounted(() => {
                     v-if="checkHasProfile(item)"
                     class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-emerald-200"
                   >
-                    <span>✓</span> Profile Centang
+                    <span>✓</span> Verified Profile
                   </span>
                   <span v-else class="text-xs text-gray-400">-</span>
                 </td>

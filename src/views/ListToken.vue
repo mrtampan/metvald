@@ -242,7 +242,7 @@ const activePresetName = computed(() => {
   return custom ? custom.name : "Custom Filter";
 });
 
-// Load custom presets dari localStorage
+// Load custom presets from localStorage
 const loadCustomPresets = () => {
   try {
     const saved = localStorage.getItem("metvald_custom_presets");
@@ -250,11 +250,11 @@ const loadCustomPresets = () => {
       customPresets.value = JSON.parse(saved);
     }
   } catch (e) {
-    console.error("Gagal membaca presets dari localStorage:", e);
+    console.error("Failed to read presets from localStorage:", e);
   }
 };
 
-// Update preset custom yang sedang aktif di localStorage (Hanya untuk preset custom)
+// Update current active custom preset in localStorage
 const updateCurrentPreset = () => {
   if (!isCurrentPresetCustom.value) return;
   const index = customPresets.value.findIndex(
@@ -269,17 +269,17 @@ const updateCurrentPreset = () => {
         "metvald_custom_presets",
         JSON.stringify(customPresets.value),
       );
-      presetSuccessMessage.value = `Preset "${customPresets.value[index].name}" berhasil diperbarui!`;
+      presetSuccessMessage.value = `Preset "${customPresets.value[index].name}" updated successfully!`;
       setTimeout(() => {
         presetSuccessMessage.value = "";
       }, 3000);
     } catch (e) {
-      console.error("Gagal memperbarui preset di localStorage:", e);
+      console.error("Failed to update preset in localStorage:", e);
     }
   }
 };
 
-// Simpan preset custom baru ke localStorage
+// Save new custom preset to localStorage
 const saveCurrentAsPreset = () => {
   if (!newPresetName.value.trim()) return;
 
@@ -295,12 +295,12 @@ const saveCurrentAsPreset = () => {
       "metvald_custom_presets",
       JSON.stringify(customPresets.value),
     );
-    presetSuccessMessage.value = `Preset "${newPreset.name}" berhasil disimpan!`;
+    presetSuccessMessage.value = `Preset "${newPreset.name}" saved successfully!`;
     setTimeout(() => {
       presetSuccessMessage.value = "";
     }, 3000);
   } catch (e) {
-    console.error("Gagal menyimpan preset ke localStorage:", e);
+    console.error("Failed to save preset to localStorage:", e);
   }
 
   activePresetKey.value = newPreset.id;
@@ -308,7 +308,7 @@ const saveCurrentAsPreset = () => {
   isModalOpen.value = false;
 };
 
-// Hapus custom preset dari localStorage
+// Delete custom preset from localStorage
 const deleteCustomPreset = (id, event) => {
   event.stopPropagation();
   customPresets.value = customPresets.value.filter((p) => p.id !== id);
@@ -318,7 +318,7 @@ const deleteCustomPreset = (id, event) => {
       JSON.stringify(customPresets.value),
     );
   } catch (e) {
-    console.error("Gagal memperbarui localStorage:", e);
+    console.error("Failed to update localStorage:", e);
   }
   if (activePresetKey.value === id) {
     applyPreset("default");
@@ -470,7 +470,7 @@ const fetchTokenList = async () => {
     currentPage.value = 1;
   } catch (err) {
     console.error("Fetch error:", err);
-    errorMessage.value = "Gagal mengambil data dari Meteora API.";
+    errorMessage.value = "Failed to fetch data from Meteora API.";
   } finally {
     isLoading.value = false;
   }
@@ -537,9 +537,9 @@ onMounted(() => {
         class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
       >
         <div>
-          <h1 class="text-2xl font-bold text-gray-900">List Token</h1>
+          <h1 class="text-2xl font-bold text-gray-900">Token List</h1>
           <p class="text-gray-500 text-sm mt-1">
-            Data pool Meteora DLMM sesuai filter kriteria pasar.
+            Meteora DLMM pool data matching market criteria filters.
           </p>
         </div>
 
@@ -652,11 +652,10 @@ onMounted(() => {
               </div>
               <div>
                 <h2 class="text-lg font-bold text-gray-900">
-                  Pengaturan Filter
+                  Filter Settings
                 </h2>
                 <p class="text-xs text-gray-500">
-                  Sesuaikan kriteria filter. Perubahan pada input akan langsung
-                  diterapkan.
+                  Adjust filter criteria. Changes to inputs will be applied immediately.
                 </p>
               </div>
             </div>
@@ -688,10 +687,10 @@ onMounted(() => {
               <div class="flex items-center justify-between mb-2.5">
                 <span
                   class="text-xs font-bold uppercase text-gray-400 tracking-wider"
-                  >Pilih Preset</span
+                  >Select Preset</span
                 >
                 <span class="text-[11px] text-gray-400"
-                  >Preset custom disimpan di localStorage</span
+                  >Custom presets are saved in localStorage</span
                 >
               </div>
               <div
@@ -742,7 +741,7 @@ onMounted(() => {
                   </button>
                   <button
                     @click="(e) => deleteCustomPreset(preset.id, e)"
-                    title="Hapus Preset"
+                    title="Delete Preset"
                     :class="[
                       'absolute right-1.5 text-xs transition p-1 rounded-full',
                       activePresetKey === preset.id
@@ -761,7 +760,7 @@ onMounted(() => {
               <h3
                 class="text-xs font-bold uppercase text-gray-400 tracking-wider"
               >
-                Kriteria Filter
+                Filter Criteria
               </h3>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -794,7 +793,7 @@ onMounted(() => {
                 <!-- Token Age (Hours) -->
                 <div>
                   <label class="block text-xs font-semibold text-gray-600 mb-1">
-                    Token Age (Jam)
+                    Token Age (Hours)
                   </label>
                   <input
                     v-model.number="filters.maxTokenAgeHours"
@@ -950,11 +949,11 @@ onMounted(() => {
               <span
                 class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
               ></span>
-              <span>Filter otomatis diterapkan saat ada perubahan.</span>
+              <span>Filters are automatically applied on change.</span>
             </div>
 
             <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-              <!-- Update Preset (Hanya muncul jika preset aktif disimpan di localStorage) -->
+              <!-- Update Preset (Only shows if active preset is custom) -->
               <button
                 v-if="isCurrentPresetCustom"
                 @click="updateCurrentPreset"
@@ -973,10 +972,10 @@ onMounted(() => {
                     d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
                   />
                 </svg>
-                Update Preset Ini
+                Update This Preset
               </button>
 
-              <!-- Tombol Simpan Sebagai Preset Baru -->
+              <!-- Button Save As New Preset -->
               <button
                 @click="isModalOpen = true"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
@@ -994,7 +993,7 @@ onMounted(() => {
                     d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
                   />
                 </svg>
-                Simpan Preset Baru
+                Save New Preset
               </button>
 
               <!-- Close Modal -->
@@ -1002,7 +1001,7 @@ onMounted(() => {
                 @click="isFilterModalOpen = false"
                 class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold text-xs px-4 py-2 rounded-xl transition"
               >
-                Tutup
+                Close
               </button>
             </div>
           </div>
@@ -1032,7 +1031,7 @@ onMounted(() => {
             <span
               class="text-xs font-bold text-gray-700 uppercase tracking-wider"
             >
-              History Screening
+              Screening History
             </span>
             <span
               class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full"
@@ -1043,7 +1042,7 @@ onMounted(() => {
           <button
             @click="clearScreeningHistory"
             class="text-[11px] text-gray-400 hover:text-red-500 transition cursor-pointer flex items-center gap-1 font-medium"
-            title="Hapus riwayat screening"
+            title="Clear screening history"
           >
             <svg
               class="w-3.5 h-3.5"
@@ -1058,7 +1057,7 @@ onMounted(() => {
                 d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
               />
             </svg>
-            Hapus History
+            Clear History
           </button>
         </div>
 
@@ -1131,14 +1130,14 @@ onMounted(() => {
           <input
             v-model.trim="searchToken"
             type="text"
-            placeholder="Cari berdasarkan Token Address, Symbol, atau Pair (contoh: JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN)..."
+            placeholder="Search by Token Address, Symbol, or Pair (e.g., JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN)..."
             class="w-full pl-10 pr-9 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50/50 font-mono transition"
           />
           <button
             v-if="searchToken"
             @click="clearTokenSearch"
             class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
-            title="Hapus pencarian"
+            title="Clear search"
           >
             <svg
               class="w-4 h-4"
@@ -1156,27 +1155,27 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Active Search Notice (Di Dalam Card Pencarian) -->
+        <!-- Active Search Notice -->
         <div
           v-if="searchToken"
           class="bg-blue-50/80 rounded-xl p-2.5 border border-blue-100 flex items-center justify-between text-xs text-blue-800"
         >
           <div class="flex items-center gap-2 flex-wrap">
-            <span class="font-bold">Hasil Pencarian Token:</span>
+            <span class="font-bold">Token Search Results:</span>
             <span
               class="bg-blue-100 text-blue-900 px-2 py-0.5 rounded font-mono text-[11px]"
             >
               {{ searchToken }}
             </span>
             <span class="text-gray-500 text-[11px]">
-              ({{ filteredPools.length }} pool ditemukan)
+              ({{ filteredPools.length }} pools found)
             </span>
           </div>
           <button
             @click="clearTokenSearch"
             class="text-blue-700 hover:text-red-600 underline text-xs font-semibold ml-2 transition"
           >
-            Hapus Pencarian
+            Clear Search
           </button>
         </div>
       </div>
@@ -1190,7 +1189,7 @@ onMounted(() => {
           <div
             class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent mb-3"
           ></div>
-          <p class="font-medium">Memuat data dari Meteora API...</p>
+          <p class="font-medium">Loading data from Meteora API...</p>
         </div>
 
         <!-- Error State -->
@@ -1203,7 +1202,7 @@ onMounted(() => {
             @click="fetchTokenList"
             class="bg-red-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-red-700"
           >
-            Coba Lagi
+            Try Again
           </button>
         </div>
 
@@ -1212,7 +1211,7 @@ onMounted(() => {
           v-else-if="filteredPools.length === 0"
           class="py-16 text-center text-gray-500"
         >
-          <p class="font-medium">Tidak ada pool yang cocok dengan pencarian.</p>
+          <p class="font-medium">No pools match your search.</p>
         </div>
 
         <!-- Table View -->
@@ -1231,7 +1230,7 @@ onMounted(() => {
                   :class="{
                     'text-blue-600 font-bold bg-blue-50/50': sortKey === 'name',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan nama"
+                  title="Click to sort by name"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Name Pair</span>
@@ -1279,7 +1278,7 @@ onMounted(() => {
                     'text-blue-600 font-bold bg-blue-50/50':
                       sortKey === 'positions_created',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan posisi yang dibuat"
+                  title="Click to sort by positions created"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Position Created</span>
@@ -1332,7 +1331,7 @@ onMounted(() => {
                     'text-blue-600 font-bold bg-blue-50/50':
                       sortKey === 'volume_active_tvl_ratio',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan rasio Volume / Active TVL"
+                  title="Click to sort by Volume / Active TVL ratio"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Volume / Active TVL</span>
@@ -1385,7 +1384,7 @@ onMounted(() => {
                   :class="{
                     'text-blue-600 font-bold bg-blue-50/50': sortKey === 'fee',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan fee"
+                  title="Click to sort by fees"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Fees</span>
@@ -1433,7 +1432,7 @@ onMounted(() => {
                     'text-blue-600 font-bold bg-blue-50/50':
                       sortKey === 'created_at',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan umur token"
+                  title="Click to sort by token age"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Token Age</span>
@@ -1483,7 +1482,7 @@ onMounted(() => {
                     'text-blue-600 font-bold bg-blue-50/50':
                       sortKey === 'market_cap',
                   }"
-                  title="Klik untuk mengurutkan berdasarkan market cap"
+                  title="Click to sort by market cap"
                 >
                   <div class="flex items-center gap-1.5">
                     <span>MarketCap</span>
@@ -1773,7 +1772,7 @@ onMounted(() => {
           <!-- Items per page & Showing info -->
           <div class="flex items-center gap-4 text-xs text-gray-500">
             <div class="flex items-center gap-2">
-              <span>Tampilkan</span>
+              <span>Show</span>
               <select
                 v-model.number="itemsPerPage"
                 @change="resetPagination"
@@ -1783,17 +1782,17 @@ onMounted(() => {
                 <option :value="20">20</option>
                 <option :value="50">50</option>
               </select>
-              <span>per halaman</span>
+              <span>per page</span>
             </div>
             <span class="hidden md:inline text-gray-300">|</span>
             <div>
-              Menampilkan
+              Showing
               <span class="font-bold text-gray-800">{{ showingStart }}</span>
               -
               <span class="font-bold text-gray-800">{{ showingEnd }}</span>
-              dari
+              of
               <span class="font-bold text-gray-800">{{ filteredPools.length }}</span>
-              pool
+              pools
             </div>
           </div>
 
@@ -1864,26 +1863,25 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Modal Simpan Preset Baru -->
+    <!-- Save New Custom Preset Modal -->
     <div
       v-if="isModalOpen"
       class="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 z-50"
     >
       <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
-        <h3 class="text-lg font-bold text-gray-900">Simpan Custom Preset</h3>
+        <h3 class="text-lg font-bold text-gray-900">Save Custom Preset</h3>
         <p class="text-xs text-gray-500">
-          Simpan pengaturan filter yang aktif saat ini sebagai preset kustom di
-          browser (localStorage).
+          Save the currently active filter settings as a custom preset in your browser (localStorage).
         </p>
 
         <div>
           <label class="block text-xs font-semibold text-gray-700 mb-1"
-            >Nama Preset</label
+            >Preset Name</label
           >
           <input
             v-model="newPresetName"
             type="text"
-            placeholder="Contoh: Gem Hunter 5m"
+            placeholder="e.g. Gem Hunter 5m"
             @keyup.enter="saveCurrentAsPreset"
             class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
           />
@@ -1894,14 +1892,14 @@ onMounted(() => {
             @click="isModalOpen = false"
             class="px-4 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-100 rounded-xl transition"
           >
-            Batal
+            Cancel
           </button>
           <button
             @click="saveCurrentAsPreset"
             :disabled="!newPresetName.trim()"
             class="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl transition disabled:opacity-50"
           >
-            Simpan
+            Save
           </button>
         </div>
       </div>
