@@ -15,6 +15,8 @@ const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
+const solPriceUsd = ref(0);
+const feesData = ref(null);
 const meteoraPools = ref([]);
 const meteoraSortKey = ref("");
 const meteoraSortOrder = ref("desc");
@@ -333,6 +335,8 @@ const fetchScreeningData = async () => {
   riskDetails.value = null;
   dexscreenerData.value = null;
   meteoraData.value = null;
+  solPriceUsd.value = 0;
+  feesData.value = null;
   meteoraPools.value = [];
   holderProfiles.value = [];
   holdersData.value = [];
@@ -508,6 +512,93 @@ const fetchScreeningData = async () => {
       }
     } catch (err) {
       console.log("Meteora fetch (non-critical):", err);
+    }
+
+    // Fetch Real-time SOL Price in USD
+    try {
+      const solRes = await fetch(
+        "https://api.dexscreener.com/latest/dex/search?q=SOL%20USDC",
+      );
+      if (solRes.ok) {
+        const solJson = await solRes.json();
+        const solPair =
+          solJson.pairs?.find(
+            (p) =>
+              p.baseToken?.symbol === "SOL" &&
+              p.quoteToken?.symbol === "USDC",
+          ) || solJson.pairs?.[0];
+        if (solPair && solPair.priceUsd) {
+          solPriceUsd.value = parseFloat(solPair.priceUsd);
+        }
+      }
+    } catch (err) {
+      console.log("SOL price fetch (non-critical):", err);
+    }
+
+    // Compute Fees Data (USD & SOL)
+    const currentSolPrice = solPriceUsd.value || 100;
+    if (meteoraPools.value && meteoraPools.value.length > 0) {
+      const totalFeeUsd = meteoraPools.value.reduce(
+        (sum, p) => sum + (Number(p.fee) || 0),
+        0,
+      );
+      const totalVolumeUsd = meteoraPools.value.reduce(
+        (sum, p) => sum + (Number(p.volume) || 0),
+        0,
+      );
+      const totalFeeSol =
+        currentSolPrice > 0 ? totalFeeUsd / currentSolPrice : 0;
+      const topPool = meteoraPools.value[0];
+
+      const poolsBreakdown = meteoraPools.value.map((p) => {
+        const pFeeUsd = Number(p.fee) || 0;
+        const pFeeSol = currentSolPrice > 0 ? pFeeUsd / currentSolPrice : 0;
+        return {
+          name: p.name || "Unknown",
+          address: p.pool_address,
+          poolType: p.pool_type || "DLMM",
+          volumeUsd: Number(p.volume) || 0,
+          feeUsd: pFeeUsd,
+          feeSol: pFeeSol,
+          baseFeePct: Number(p.fee_pct) || 0,
+          dynamicFeePct: Number(p.dynamic_fee_pct) || 0,
+          feeTvlRatio: Number(p.fee_tvl_ratio) || 0,
+          tvl: Number(p.tvl) || 0,
+        };
+      });
+
+      feesData.value = {
+        totalFeeUsd,
+        totalFeeSol,
+        totalVolumeUsd,
+        solPrice: currentSolPrice,
+        topPoolFeeUsd: Number(topPool.fee) || 0,
+        topPoolFeeSol:
+          currentSolPrice > 0 ? (Number(topPool.fee) || 0) / currentSolPrice : 0,
+        topPoolBaseFeePct: Number(topPool.fee_pct) || 0,
+        topPoolDynamicFeePct: Number(topPool.dynamic_fee_pct) || 0,
+        topPoolFeeTvlRatio: Number(topPool.fee_tvl_ratio) || 0,
+        poolsBreakdown,
+      };
+    } else if (dexscreenerData.value) {
+      const vol24h = dexscreenerData.value.volume24h || 0;
+      const estimatedFeeUsd = vol24h * 0.01;
+      const estimatedFeeSol =
+        currentSolPrice > 0 ? estimatedFeeUsd / currentSolPrice : 0;
+
+      feesData.value = {
+        totalFeeUsd: estimatedFeeUsd,
+        totalFeeSol: estimatedFeeSol,
+        totalVolumeUsd: vol24h,
+        solPrice: currentSolPrice,
+        topPoolFeeUsd: estimatedFeeUsd,
+        topPoolFeeSol: estimatedFeeSol,
+        topPoolBaseFeePct: 1,
+        topPoolDynamicFeePct: 0,
+        topPoolFeeTvlRatio: 0,
+        isEstimated: true,
+        poolsBreakdown: [],
+      };
     }
 
     // Record screening history ke central Pinia store
@@ -1159,6 +1250,67 @@ watch(
                 ></div>
               </div>
             </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fees Data Card (Positioned below Holder Profile Card) -->
+      <div
+        v-if="feesData || submittedAddress"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-emerald-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            Fees Data
+          </h2>
+          <span
+            v-if="solPriceUsd"
+            class="text-xs font-semibold text-gray-600 bg-gray-100 px-3 py-1 rounded-full flex items-center gap-1.5"
+          >
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            1 SOL = ${{ solPriceUsd.toLocaleString('en-US', { maximumFractionDigits: 2 }) }} USD
+          </span>
+        </div>
+
+        <!-- Fees Key Metrics Grid (Total Fee USD, Total Fee SOL) -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Total 24h Fees (USD) -->
+          <div class="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-100">
+            <p class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider">
+              24h Total Fees (USD)
+            </p>
+            <p class="text-lg font-bold text-emerald-900 mt-1">
+              {{ formatCurrency(feesData?.totalFeeUsd) }}
+            </p>
+            <p v-if="feesData?.isEstimated" class="text-[10px] text-emerald-700 mt-0.5">
+              Estimated (1% Vol)
+            </p>
+          </div>
+
+          <!-- Total 24h Fees (SOL) -->
+          <div class="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100">
+            <p class="text-[11px] font-semibold text-purple-800 uppercase tracking-wider">
+              24h Total Fees (SOL)
+            </p>
+            <p class="text-lg font-bold text-purple-900 mt-1">
+              {{ formatSol(feesData?.totalFeeSol) }}
+            </p>
+            <p class="text-[10px] text-purple-700 mt-0.5">
+              Converted at current SOL price
+            </p>
           </div>
         </div>
       </div>
