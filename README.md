@@ -13,7 +13,7 @@ npm install
 ```
 
 ```sh
-npm run dev
+vercel dev
 ```
 
 ```sh
