@@ -2030,48 +2030,6 @@ watch(
         </div>
       </div>
 
-      <!-- Bubblemap Card -->
-      <div
-        v-if="submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
-      >
-        <div class="flex items-center justify-between flex-wrap gap-2">
-          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <svg
-              class="w-5 h-5 text-indigo-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
-              />
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
-              />
-            </svg>
-            Bubblemap
-          </h2>
-        </div>
-
-        <!-- Embedded Bubblemap Container -->
-        <div
-          class="rounded-xl overflow-hidden border border-gray-200 bg-gray-900 relative"
-        >
-          <iframe
-            :key="`bubblemap-${submittedAddress}`"
-            :src="`https://embed.insightx.network/atlas/sol/${submittedAddress}?embed_id=HPxv96C1Hq9fna`"
-            class="custom-uwwqev w-full h-[550px] border-0"
-            allowfullscreen
-          ></iframe>
-        </div>
-      </div>
       <div
         v-if="submittedAddress"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
