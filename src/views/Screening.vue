@@ -59,6 +59,44 @@ const currentChartExternalUrl = computed(() => {
   return `https://dexscreener.com/solana/${submittedAddress.value}`;
 });
 
+const externalRedirectLinks = computed(() => {
+  if (!submittedAddress.value) return [];
+  const addr = submittedAddress.value;
+  return [
+    {
+      id: "bubblemaps",
+      name: "Bubblemaps",
+      url: `https://v2.bubblemaps.io/map?address=${addr}&chain=solana`,
+      icon: "https://www.google.com/s2/favicons?domain=bubblemaps.io&sz=64",
+      bgClass:
+        "bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200",
+    },
+    {
+      id: "fabriq",
+      name: "Fabriq Trade",
+      url: `https://fabriq.trade/trending?includeTokens=${addr}`,
+      icon: "https://www.google.com/s2/favicons?domain=fabriq.trade&sz=64",
+      bgClass: "bg-cyan-50 hover:bg-cyan-100 text-cyan-700 border-cyan-200",
+    },
+    {
+      id: "axiom",
+      name: "Axiom Trade",
+      url: `https://axiom.trade/t/${addr}/`,
+      icon: "https://www.google.com/s2/favicons?domain=axiom.trade&sz=64",
+      bgClass:
+        "bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200",
+    },
+    {
+      id: "gmgn",
+      name: "GMGN",
+      url: `https://gmgn.ai/sol/token/${addr}`,
+      icon: "https://www.google.com/s2/favicons?domain=gmgn.ai&sz=64",
+      bgClass:
+        "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200",
+    },
+  ];
+});
+
 const tokenWebsites = computed(() => {
   const sites = dexscreenerData.value?.websites || [];
   if (!sites) return [];
@@ -1019,6 +1057,65 @@ watch(
               allowfullscreen
             ></iframe>
           </div>
+
+          <!-- External Tool Links (Below Chart) -->
+          <div
+            v-if="externalRedirectLinks.length"
+            class="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2"
+          >
+            <div
+              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500"
+            >
+              <svg
+                class="w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                />
+              </svg>
+              <span>External Tools:</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <a
+                v-for="tool in externalRedirectLinks"
+                :key="tool.id"
+                :href="tool.url"
+                target="_blank"
+                rel="noopener noreferrer"
+                :class="[
+                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition shadow-2xs',
+                  tool.bgClass,
+                ]"
+                :title="tool.name"
+              >
+                <img
+                  :src="tool.icon"
+                  :alt="tool.name"
+                  class="w-3.5 h-3.5 rounded-xs object-contain"
+                />
+                <span>{{ tool.name }}</span>
+                <svg
+                  class="w-3 h-3 opacity-60"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                  />
+                </svg>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1933,7 +2030,48 @@ watch(
         </div>
       </div>
 
-      <!-- Extend Analytics Card (Placed above Token Holders) -->
+      <!-- Bubblemap Card -->
+      <div
+        v-if="submittedAddress"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-indigo-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"
+              />
+            </svg>
+            Bubblemap
+          </h2>
+        </div>
+
+        <!-- Embedded Bubblemap Container -->
+        <div
+          class="rounded-xl overflow-hidden border border-gray-200 bg-gray-900 relative"
+        >
+          <iframe
+            :key="`bubblemap-${submittedAddress}`"
+            :src="`https://embed.insightx.network/atlas/sol/${submittedAddress}?embed_id=HPxv96C1Hq9fna`"
+            class="custom-uwwqev w-full h-[550px] border-0"
+            allowfullscreen
+          ></iframe>
+        </div>
+      </div>
       <div
         v-if="submittedAddress"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
