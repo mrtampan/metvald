@@ -15,6 +15,7 @@ const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
+const jupiterData = ref(null);
 const solPriceUsd = ref(0);
 const feesData = ref(null);
 const meteoraPools = ref([]);
@@ -241,8 +242,8 @@ const formatCurrency = (val) => {
 const formatSol = (val) => {
   if (val === undefined || val === null || isNaN(val)) return "N/A";
   return (
-    Math.round(Number(val)).toLocaleString("en-US", {
-      maximumFractionDigits: 0,
+    Number(val).toLocaleString("en-US", {
+      maximumFractionDigits: 2,
     }) + " SOL"
   );
 };
@@ -348,7 +349,7 @@ const sortedMeteoraPools = computed(() => {
         break;
       case "marketcap":
         valA = getPoolMarketCap(a);
-        valB = getPoolMarketCap(a);
+        valB = getPoolMarketCap(b);
         break;
       default:
         return 0;
@@ -375,6 +376,7 @@ const fetchScreeningData = async () => {
   riskDetails.value = null;
   dexscreenerData.value = null;
   meteoraData.value = null;
+  jupiterData.value = null;
   solPriceUsd.value = 0;
   feesData.value = null;
   meteoraPools.value = [];
@@ -523,35 +525,66 @@ const fetchScreeningData = async () => {
         const pools = meteoraJson.data || meteoraJson.pools || [];
         meteoraPools.value = pools;
         if (pools.length > 0) {
-          const item = pools[0];
-          const targetToken =
-            item.token_x?.address?.toLowerCase() === address.toLowerCase()
-              ? item.token_x
-              : item.token_y?.address?.toLowerCase() === address.toLowerCase()
-                ? item.token_y
-                : item.token_x;
+          const maxPositionsCreated = Math.max(
+            ...pools.map((p) => Number(p.positions_created) || 0),
+          );
+          const maxTotalLps = Math.max(
+            ...pools.map((p) => Number(p.total_lps) || 0),
+          );
+          const maxMarketCap = Math.max(
+            ...pools.map((p) => Number(getPoolMarketCap(p)) || 0),
+          );
+          const maxTvl = Math.max(...pools.map((p) => Number(p.tvl) || 0));
+          const maxVolume = Math.max(
+            ...pools.map((p) => Number(p.volume) || 0),
+          );
 
-          const createdAt =
-            targetToken?.created_at || item.pool_created_at || null;
+          let earliestCreatedAt = null;
+          pools.forEach((p) => {
+            const targetToken = getPoolTargetToken(p);
+            const ca = targetToken?.created_at || p.pool_created_at || null;
+            if (ca) {
+              if (earliestCreatedAt === null || ca < earliestCreatedAt) {
+                earliestCreatedAt = ca;
+              }
+            }
+          });
+
           let ageInHours = null;
-          if (createdAt) {
-            ageInHours = (Date.now() - createdAt) / (1000 * 60 * 60);
+          if (earliestCreatedAt) {
+            ageInHours = (Date.now() - earliestCreatedAt) / (1000 * 60 * 60);
           }
 
           meteoraData.value = {
-            positionsCreated: item.positions_created ?? 0,
-            totalLps: item.total_lps ?? 0,
-            createdAt: createdAt,
+            positionsCreated: maxPositionsCreated,
+            totalLps: maxTotalLps,
+            createdAt: earliestCreatedAt,
             ageInHours: ageInHours,
-            fees: item.fee ?? 0,
-            marketcap: targetToken?.market_cap ?? 0,
-            tvl: item.tvl ?? 0,
-            volume: item.volume ?? 0,
+            marketcap: maxMarketCap,
+            tvl: maxTvl,
+            volume: maxVolume,
           };
         }
       }
     } catch (err) {
       console.log("Meteora fetch (non-critical):", err);
+    }
+
+    // Fetch Jupiter Datapi Asset Search
+    try {
+      const jupRes = await fetch(
+        `https://datapi.jup.ag/v1/assets/search?query=${address}`,
+      );
+      if (jupRes.ok) {
+        const jupJson = await jupRes.json();
+        console.log("Jupiter Datapi Asset Search Data:", jupJson);
+        const item = Array.isArray(jupJson) ? jupJson[0] : jupJson;
+        if (item) {
+          jupiterData.value = item;
+        }
+      }
+    } catch (err) {
+      console.log("Jupiter Datapi fetch (non-critical):", err);
     }
 
     // Fetch Real-time SOL Price in USD
@@ -660,6 +693,7 @@ const fetchScreeningData = async () => {
     riskDetails.value = null;
     dexscreenerData.value = null;
     meteoraData.value = null;
+    jupiterData.value = null;
     meteoraPools.value = [];
     holderProfiles.value = null;
     holdersData.value = [];
@@ -1353,15 +1387,228 @@ watch(
         </div>
       </div>
 
-      <!-- Fees Data Card (Positioned below Holder Profile Card) -->
+      <!-- Jupiter Data Card (Positioned above Meteora Data) -->
       <div
-        v-if="solPriceUsd > 0 && feesData"
+        v-if="jupiterData"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <img
+              src="https://www.google.com/s2/favicons?domain=jup.ag&sz=64"
+              alt="Jupiter"
+              class="w-5 h-5 rounded-full"
+            />
+            Jupiter Data
+          </h2>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3"
+        >
+          <!-- Organic Score & Label -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.organicScoreLabel === 'high' ||
+              (jupiterData.organicScore != null &&
+                jupiterData.organicScore >= 80)
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : jupiterData.organicScoreLabel === 'medium' ||
+                    (jupiterData.organicScore != null &&
+                      jupiterData.organicScore >= 50)
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-red-50 border-red-200 text-red-700',
+            ]"
+          >
+            <div class="flex items-center justify-between gap-1">
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.organicScoreLabel === 'high' ||
+                  (jupiterData.organicScore != null &&
+                    jupiterData.organicScore >= 80)
+                    ? 'text-emerald-600'
+                    : jupiterData.organicScoreLabel === 'medium' ||
+                        (jupiterData.organicScore != null &&
+                          jupiterData.organicScore >= 50)
+                      ? 'text-amber-600'
+                      : 'text-red-600',
+                ]"
+              >
+                Organic Score
+              </p>
+              <span
+                v-if="jupiterData.organicScoreLabel"
+                :class="[
+                  'text-[9px] font-bold px-1.5 py-0.5 rounded uppercase',
+                  jupiterData.organicScoreLabel === 'high'
+                    ? 'bg-emerald-100 text-emerald-800'
+                    : jupiterData.organicScoreLabel === 'medium'
+                      ? 'bg-amber-100 text-amber-800'
+                      : 'bg-red-100 text-red-800',
+                ]"
+              >
+                {{ jupiterData.organicScoreLabel }}
+              </span>
+            </div>
+            <p class="text-sm font-bold mt-0.5">
+              {{
+                jupiterData.organicScore != null
+                  ? jupiterData.organicScore.toFixed(2)
+                  : "N/A"
+              }}
+            </p>
+          </div>
+
+          <!-- Market Cap -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.mcap != null && jupiterData.mcap >= 250000
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                jupiterData.mcap != null && jupiterData.mcap >= 250000
+                  ? 'text-emerald-600'
+                  : 'text-red-600',
+              ]"
+            >
+              Market Cap
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(jupiterData.mcap) }}
+            </p>
+          </div>
+
+          <!-- Fees -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.fees != null && jupiterData.fees >= 30
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                jupiterData.fees != null && jupiterData.fees >= 30
+                  ? 'text-emerald-600'
+                  : 'text-red-600',
+              ]"
+            >
+              Fees
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatSol(jupiterData.fees) }}
+            </p>
+          </div>
+
+          <!-- DEX Paid -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.dexPaidAt ||
+              jupiterData.dexPaid ||
+              jupiterData.dexpaid
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-gray-50 border-gray-200 text-gray-600',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                jupiterData.dexPaidAt ||
+                jupiterData.dexPaid ||
+                jupiterData.dexpaid
+                  ? 'text-emerald-600'
+                  : 'text-gray-500',
+              ]"
+            >
+              DEX Paid
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{
+                jupiterData.dexPaidAt ||
+                jupiterData.dexPaid ||
+                jupiterData.dexpaid
+                  ? "Paid"
+                  : "No"
+              }}
+            </p>
+          </div>
+
+          <!-- Holder Count -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.holderCount != null && jupiterData.holderCount >= 1000
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-red-50 border-red-200 text-red-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                jupiterData.holderCount != null && jupiterData.holderCount >= 1000
+                  ? 'text-emerald-600'
+                  : 'text-red-600',
+              ]"
+            >
+              Holder
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{
+                jupiterData.holderCount != null
+                  ? jupiterData.holderCount.toLocaleString("en-US")
+                  : "N/A"
+              }}
+            </p>
+          </div>
+
+          <!-- Liquidity -->
+          <div
+            class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-900"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+            >
+              Liquidity
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(jupiterData.liquidity) }}
+            </p>
+          </div>
+
+          <!-- Launchpad -->
+          <div
+            class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-900"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+            >
+              Launchpad
+            </p>
+            <p class="text-sm font-bold mt-0.5 capitalize">
+              {{ jupiterData.launchpad || "N/A" }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Jupiter Audit Section -->
+        <div
+          v-if="jupiterData.audit"
+          class="pt-4 border-t border-gray-100 space-y-3"
+        >
+          <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
             <svg
-              class="w-5 h-5 text-emerald-600"
+              class="w-4 h-4 text-emerald-600"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -1370,10 +1617,213 @@ watch(
                 stroke-linecap="round"
                 stroke-linejoin="round"
                 stroke-width="2"
-                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
               />
             </svg>
-            Fees Data
+            Jupiter Audit Data
+          </h3>
+
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
+          >
+            <!-- Bot Holders -->
+            <div
+              :class="[
+                'p-3 rounded-xl border transition-colors',
+                jupiterData.audit.botHoldersPercentage != null &&
+                jupiterData.audit.botHoldersPercentage < 30
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700',
+              ]"
+            >
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.audit.botHoldersPercentage != null &&
+                  jupiterData.audit.botHoldersPercentage < 30
+                    ? 'text-emerald-600'
+                    : 'text-red-600',
+                ]"
+              >
+                Bot Holders
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  jupiterData.audit.botHoldersCount != null
+                    ? jupiterData.audit.botHoldersCount.toLocaleString(
+                        "en-US",
+                      ) +
+                      (jupiterData.audit.botHoldersPercentage != null
+                        ? ` (${jupiterData.audit.botHoldersPercentage.toFixed(2)}%)`
+                        : "")
+                    : "N/A"
+                }}
+              </p>
+            </div>
+
+            <!-- Total Bundles -->
+            <div
+              :class="[
+                'p-3 rounded-xl border transition-colors',
+                jupiterData.audit.bundlerStats?.holdingPct != null
+                  ? jupiterData.audit.bundlerStats.holdingPct >= 30
+                    ? 'bg-red-50 border-red-200 text-red-700'
+                    : 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-gray-50 border-gray-200 text-gray-900',
+              ]"
+            >
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.audit.bundlerStats?.holdingPct != null
+                    ? jupiterData.audit.bundlerStats.holdingPct >= 30
+                      ? 'text-red-600'
+                      : 'text-emerald-600'
+                    : 'text-gray-500',
+                ]"
+              >
+                Bundles
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  jupiterData.audit.bundlerStats?.totalBundles != null
+                    ? jupiterData.audit.bundlerStats.totalBundles.toLocaleString(
+                        "en-US",
+                      ) +
+                      (jupiterData.audit.bundlerStats.holdingPct != null
+                        ? ` (${jupiterData.audit.bundlerStats.holdingPct.toFixed(2)}%)`
+                        : "")
+                    : "N/A"
+                }}
+              </p>
+            </div>
+
+            <!-- Top Holders Share -->
+            <div
+              :class="[
+                'p-3 rounded-xl border transition-colors',
+                jupiterData.audit.topHoldersPercentage <= 30
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : jupiterData.audit.topHoldersPercentage <= 50
+                    ? 'bg-amber-50 border-amber-200 text-amber-700'
+                    : 'bg-red-50 border-red-200 text-red-700',
+              ]"
+            >
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.audit.topHoldersPercentage <= 30
+                    ? 'text-emerald-600'
+                    : jupiterData.audit.topHoldersPercentage <= 50
+                      ? 'text-amber-600'
+                      : 'text-red-600',
+                ]"
+              >
+                Top Holders %
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  jupiterData.audit.topHoldersPercentage != null
+                    ? jupiterData.audit.topHoldersPercentage.toFixed(2) + "%"
+                    : "N/A"
+                }}
+              </p>
+            </div>
+
+            <!-- Mint Auth Disabled -->
+            <div
+              :class="[
+                'p-3 rounded-xl border transition-colors',
+                jupiterData.audit.mintAuthorityDisabled
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700',
+              ]"
+            >
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.audit.mintAuthorityDisabled
+                    ? 'text-emerald-600'
+                    : 'text-red-600',
+                ]"
+              >
+                Mint Auth
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  jupiterData.audit.mintAuthorityDisabled
+                    ? "Disabled"
+                    : "Enabled"
+                }}
+              </p>
+            </div>
+
+            <!-- Freeze Auth Disabled -->
+            <div
+              :class="[
+                'p-3 rounded-xl border transition-colors',
+                jupiterData.audit.freezeAuthorityDisabled
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700',
+              ]"
+            >
+              <p
+                :class="[
+                  'text-[11px] font-semibold uppercase tracking-wider',
+                  jupiterData.audit.freezeAuthorityDisabled
+                    ? 'text-emerald-600'
+                    : 'text-red-600',
+                ]"
+              >
+                Freeze Auth
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  jupiterData.audit.freezeAuthorityDisabled
+                    ? "Disabled"
+                    : "Enabled"
+                }}
+              </p>
+            </div>
+
+            <!-- Dev Mints -->
+            <div
+              class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-900"
+            >
+              <p
+                class="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+              >
+                Dev Mints
+              </p>
+              <p class="text-sm font-bold mt-0.5">
+                {{ jupiterData.audit.devMints ?? "N/A" }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Meteora Data Card (Positioned above Rugcheck Data) -->
+      <div
+        v-if="meteoraData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-cyan-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
+            </svg>
+            Meteora data
           </h2>
           <span
             v-if="solPriceUsd"
@@ -1389,73 +1839,214 @@ watch(
           </span>
         </div>
 
-        <!-- Fees Key Metrics Grid (Total Fee USD, Total Fee SOL) -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <!-- Total 24h Fees (USD) -->
+        <!-- Metrics Grid (4 items per row: Row 1 = Position Created, Total LPs, Token Age, Market Cap; Row 2 = TVL, Volume, Fees USD, Fees SOL) -->
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
+          <!-- Position Created -->
           <div
-            class="p-3.5 bg-emerald-50/60 rounded-xl border border-emerald-100"
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.positionsCreated < 50
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.positionsCreated < 50
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Position Created
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ meteoraData.positionsCreated.toLocaleString("en-US") }}
+            </p>
+          </div>
+
+          <!-- Total LPs -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.totalLps < 50
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.totalLps < 50 ? 'text-red-600' : 'text-emerald-600',
+              ]"
+            >
+              Total LPs
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ meteoraData.totalLps.toLocaleString("en-US") }}
+            </p>
+          </div>
+
+          <!-- Token Age -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.ageInHours === null || meteoraData.ageInHours < 10
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.ageInHours === null || meteoraData.ageInHours < 10
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Token Age
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatAge(meteoraData.createdAt) }}
+            </p>
+          </div>
+
+          <!-- Marketcap -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.marketcap < 250000
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.marketcap < 250000
+                  ? 'text-red-600'
+                  : 'text-emerald-600',
+              ]"
+            >
+              Market Cap
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(meteoraData.marketcap) }}
+            </p>
+          </div>
+
+          <!-- TVL -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.tvl > 30000
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-gray-50 border-gray-200 text-gray-900',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.tvl > 30000 ? 'text-emerald-600' : 'text-gray-500',
+              ]"
+            >
+              TVL
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(meteoraData.tvl) }}
+            </p>
+          </div>
+
+          <!-- Volume -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              meteoraData.volume < 1000
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                meteoraData.volume < 1000 ? 'text-red-600' : 'text-emerald-600',
+              ]"
+            >
+              Volume
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatCurrency(meteoraData.volume) }}
+            </p>
+          </div>
+
+          <!-- 24h Fees (USD) -->
+          <div
+            v-if="solPriceUsd > 0 && feesData"
+            class="p-3 bg-emerald-50/60 rounded-xl border border-emerald-100"
           >
             <p
               class="text-[11px] font-semibold text-emerald-800 uppercase tracking-wider"
             >
-              24h Total Fees (USD)
+              24h Fees (USD)
             </p>
-            <p class="text-lg font-bold text-emerald-900 mt-1">
+            <p class="text-sm font-bold text-emerald-900 mt-0.5">
               {{ formatCurrency(feesData?.totalFeeUsd) }}
-            </p>
-            <p
-              v-if="feesData?.isEstimated"
-              class="text-[10px] text-emerald-700 mt-0.5"
-            >
-              Estimated (1% Vol)
             </p>
           </div>
 
-          <!-- Total 24h Fees (SOL) -->
+          <!-- 24h Fees (SOL) -->
           <div
-            class="p-3.5 bg-purple-50/60 rounded-xl border border-purple-100"
+            v-if="solPriceUsd > 0 && feesData"
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              (feesData?.totalFeeSol || 0) > 30
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                : 'bg-purple-50/60 border-purple-100 text-purple-900',
+            ]"
           >
             <p
-              class="text-[11px] font-semibold text-purple-800 uppercase tracking-wider"
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                (feesData?.totalFeeSol || 0) > 30
+                  ? 'text-emerald-600'
+                  : 'text-purple-800',
+              ]"
             >
-              24h Total Fees (SOL)
+              24h Fees (SOL)
             </p>
-            <p class="text-lg font-bold text-purple-900 mt-1">
+            <p class="text-sm font-bold mt-0.5">
               {{ formatSol(feesData?.totalFeeSol) }}
-            </p>
-            <p class="text-[10px] text-purple-700 mt-0.5">
-              Converted at current SOL price
             </p>
           </div>
         </div>
-      </div>
 
-      <!-- SOL Price Failure Note (Shown when SOL price cannot be fetched) -->
-      <div
-        v-else-if="submittedAddress && !solPriceUsd && !isLoading"
-        class="bg-red-50 rounded-2xl border border-red-300 p-4 shadow-sm flex items-center gap-3 text-red-800"
-      >
-        <svg
-          class="w-5 h-5 text-red-500 flex-shrink-0"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+        <!-- SOL Price Failure Note -->
+        <div
+          v-if="submittedAddress && !solPriceUsd && !isLoading"
+          class="bg-red-50 rounded-xl border border-red-300 p-3.5 flex items-center gap-3 text-red-800"
         >
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-          />
-        </svg>
-        <div class="text-xs font-medium">
-          <p class="font-bold text-red-900">
-            Harga SOL (SOL Price) Tidak Dapat Diperoleh
-          </p>
-          <p class="text-red-700 mt-0.5">
-            Data fees tidak dapat dihitung atau ditampilkan tanpa harga SOL.
-            Silakan reload halaman.
-          </p>
+          <svg
+            class="w-5 h-5 text-red-500 flex-shrink-0"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              stroke-width="2"
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+            />
+          </svg>
+          <div class="text-xs font-medium">
+            <p class="font-bold text-red-900">
+              Harga SOL (SOL Price) Tidak Dapat Diperoleh
+            </p>
+            <p class="text-red-700 mt-0.5">
+              Data fees tidak dapat dihitung atau ditampilkan tanpa harga SOL.
+              Silakan reload halaman.
+            </p>
+          </div>
         </div>
       </div>
 
@@ -1531,172 +2122,6 @@ watch(
             >
               ✓ No risks detected
             </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Meteora Data Card -->
-      <div
-        v-if="meteoraData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
-      >
-        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <svg
-            class="w-5 h-5 text-cyan-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 10V3L4 14h7v7l9-11h-7z"
-            />
-          </svg>
-          Meteora data
-        </h2>
-
-        <!-- Metrics Grid (Position Created, Total LPs, Token Age, Fees, Marketcap, TVL, Volume) -->
-        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-          <!-- Position Created -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              meteoraData.positionsCreated < 50
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                meteoraData.positionsCreated < 50
-                  ? 'text-red-600'
-                  : 'text-emerald-600',
-              ]"
-            >
-              Position Created
-            </p>
-            <p class="text-sm font-bold mt-0.5">
-              {{ meteoraData.positionsCreated.toLocaleString("en-US") }}
-            </p>
-          </div>
-
-          <!-- Total LPs -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              meteoraData.totalLps < 50
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                meteoraData.totalLps < 50 ? 'text-red-600' : 'text-emerald-600',
-              ]"
-            >
-              Total LPs
-            </p>
-            <p class="text-sm font-bold mt-0.5">
-              {{ meteoraData.totalLps.toLocaleString("en-US") }}
-            </p>
-          </div>
-
-          <!-- Token Age -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              meteoraData.ageInHours === null || meteoraData.ageInHours < 10
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                meteoraData.ageInHours === null || meteoraData.ageInHours < 10
-                  ? 'text-red-600'
-                  : 'text-emerald-600',
-              ]"
-            >
-              Token Age
-            </p>
-            <p class="text-sm font-bold mt-0.5">
-              {{ formatAge(meteoraData.createdAt) }}
-            </p>
-          </div>
-
-          <!-- Fees -->
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Fees
-            </p>
-            <p class="text-sm font-bold text-gray-900 mt-0.5">
-              {{ formatCurrency(meteoraData.fees) }}
-            </p>
-          </div>
-
-          <!-- Marketcap -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              meteoraData.marketcap < 250000
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                meteoraData.marketcap < 250000
-                  ? 'text-red-600'
-                  : 'text-emerald-600',
-              ]"
-            >
-              Market Cap
-            </p>
-            <p class="text-sm font-bold mt-0.5">
-              {{ formatCurrency(meteoraData.marketcap) }}
-            </p>
-          </div>
-
-          <!-- TVL -->
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-200">
-            <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              TVL
-            </p>
-            <p class="text-sm font-bold text-gray-900 mt-0.5">
-              {{ formatCurrency(meteoraData.tvl) }}
-            </p>
-          </div>
-
-          <!-- Volume -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              meteoraData.volume < 1000
-                ? 'bg-red-50 border-red-200 text-red-700'
-                : 'bg-emerald-50 border-emerald-200 text-emerald-700',
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                meteoraData.volume < 1000 ? 'text-red-600' : 'text-emerald-600',
-              ]"
-            >
-              Volume
-            </p>
-            <p class="text-sm font-bold mt-0.5">
-              {{ formatCurrency(meteoraData.volume) }}
-            </p>
           </div>
         </div>
       </div>
@@ -2027,95 +2452,6 @@ watch(
               </tr>
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div
-        v-if="submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
-      >
-        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <svg
-            class="w-5 h-5 text-blue-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
-            />
-          </svg>
-          Holder Analytics
-        </h2>
-
-        <!-- Metrics Grid (Count Bundled, Top 10 Supply Share, Total Holders) -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <!-- Count Insiders -->
-          <div
-            :class="[
-              'p-3 rounded-xl border transition-colors',
-              getRiskInsiderLevel(insiderWalletsCount).cardColor,
-            ]"
-          >
-            <p
-              :class="[
-                'text-[11px] font-semibold uppercase tracking-wider',
-                getRiskInsiderLevel(insiderWalletsCount).labelColor,
-              ]"
-            >
-              Network Insiders
-            </p>
-            <div class="flex items-center justify-between mt-0.5">
-              <p
-                :class="[
-                  'text-base font-bold',
-                  getRiskInsiderLevel(insiderWalletsCount).color,
-                ]"
-              >
-                {{ insiderWalletsCount }}
-              </p>
-            </div>
-          </div>
-
-          <!-- Top 10 Supply Share -->
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
-            <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Top 10 Supply Share
-            </p>
-            <p
-              :class="[
-                'text-base font-bold mt-0.5',
-                top10Percentage > 60
-                  ? 'text-red-600'
-                  : top10Percentage > 30
-                    ? 'text-amber-600'
-                    : 'text-emerald-600',
-              ]"
-            >
-              {{ top10Percentage }}%
-            </p>
-          </div>
-
-          <!-- Total Holders Count -->
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
-            <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
-            >
-              Total Holders
-            </p>
-            <p class="text-base font-bold text-gray-900 mt-0.5">
-              {{
-                totalHoldersCount
-                  ? totalHoldersCount.toLocaleString("en-US")
-                  : "0"
-              }}
-            </p>
-          </div>
         </div>
       </div>
     </div>
