@@ -21,12 +21,7 @@
           >
             Token List
           </RouterLink>
-          <RouterLink
-            to="/check-token"
-            class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium"
-          >
-            Check Token
-          </RouterLink>
+
           <RouterLink
             to="/dexscreener-list"
             class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium flex items-center gap-1.5"
@@ -96,12 +91,7 @@
         >
           Dexscreener List
         </RouterLink>
-        <RouterLink
-          to="/check-token"
-          class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
-        >
-          Check Token
-        </RouterLink>
+
       </div>
     </div>
   </nav>
