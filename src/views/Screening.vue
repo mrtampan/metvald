@@ -40,7 +40,7 @@ const chartPlatforms = [
 const currentChartEmbedUrl = computed(() => {
   if (!submittedAddress.value) return "";
   if (selectedChart.value === "gmgn") {
-    return `https://gmgn.ai/sol/token/${submittedAddress.value}`;
+    return `https://www.gmgn.cc/kline/sol/${submittedAddress.value}?theme=light`;
   }
   if (selectedChart.value === "geckoterminal") {
     return `https://www.geckoterminal.com/solana/tokens/${submittedAddress.value}?embed=1&info=0&swaps=0`;
