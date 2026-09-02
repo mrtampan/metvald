@@ -16,6 +16,7 @@ const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
 const jupiterData = ref(null);
+const narrativeData = ref(null);
 const solPriceUsd = ref(0);
 const feesData = ref(null);
 const meteoraPools = ref([]);
@@ -289,6 +290,7 @@ const fetchScreeningData = async () => {
   dexscreenerData.value = null;
   meteoraData.value = null;
   jupiterData.value = null;
+  narrativeData.value = null;
   solPriceUsd.value = 0;
   feesData.value = null;
   meteoraPools.value = [];
@@ -464,6 +466,25 @@ const fetchScreeningData = async () => {
       console.log("Jupiter Datapi fetch (non-critical):", err);
     }
 
+    // Fetch Jupiter Narrative Data
+    try {
+      const narrativeRes = await fetch(
+        `https://datapi.jup.ag/v1/chaininsight/narrative/${address}`,
+      );
+      if (narrativeRes.ok) {
+        const narrativeJson = await narrativeRes.json();
+        console.log("Jupiter Narrative Data:", narrativeJson);
+        if (narrativeJson && narrativeJson.narrative) {
+          const text = String(narrativeJson.narrative).trim();
+          if (text && !text.toLowerCase().includes("generating narrative")) {
+            narrativeData.value = text;
+          }
+        }
+      }
+    } catch (err) {
+      console.log("Jupiter Narrative fetch (non-critical):", err);
+    }
+
     // Fetch Real-time SOL Price in USD
     try {
       const solRes = await fetch(
@@ -571,6 +592,7 @@ const fetchScreeningData = async () => {
     dexscreenerData.value = null;
     meteoraData.value = null;
     jupiterData.value = null;
+    narrativeData.value = null;
     meteoraPools.value = [];
     holdersData.value = [];
     totalHoldersCount.value = 0;
@@ -759,17 +781,95 @@ watch(
               "
             />
             <div>
-              <div class="flex items-center gap-2">
+              <div class="flex items-center gap-2 flex-wrap">
                 <h2 class="text-lg font-bold text-gray-900">
                   {{
                     tokenMeta?.name || dexscreenerData?.name || "Unknown Token"
                   }}
                 </h2>
                 <span
-                  class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-md"
+                  class="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1"
                 >
                   {{ tokenMeta?.symbol || dexscreenerData?.symbol || "N/A" }}
                 </span>
+
+                <!-- Verified Icon (from Jupiter isVerified) -->
+                <span
+                  v-if="jupiterData?.isVerified"
+                  class="inline-flex items-center text-blue-500"
+                  title="Verified on Jupiter"
+                >
+                  <svg
+                    class="w-4.5 h-4.5 fill-current"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fill-rule="evenodd"
+                      d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                      clip-rule="evenodd"
+                    />
+                  </svg>
+                </span>
+
+                <!-- Message Icon for Narrative with Tooltip on Hover -->
+                <div
+                  v-if="narrativeData"
+                  class="relative group inline-flex items-center"
+                >
+                  <button
+                    type="button"
+                    class="p-1 text-gray-500 hover:text-blue-600 bg-gray-100 hover:bg-blue-50 rounded-md transition focus:outline-none cursor-pointer"
+                    aria-label="Token Narrative"
+                  >
+                    <svg
+                      class="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                      />
+                    </svg>
+                  </button>
+
+                  <!-- Flowbite Bottom Tooltip Popup -->
+                  <div
+                    role="tooltip"
+                    class="absolute left-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2.5 invisible opacity-0 group-hover:visible group-hover:opacity-100 transition-all duration-200 w-72 sm:w-80 md:w-96 p-3.5 bg-gray-900/95 text-white text-xs rounded-xl shadow-2xl z-50 pointer-events-none border border-gray-700/80"
+                  >
+                    <div
+                      class="font-semibold text-blue-400 mb-1 flex items-center gap-1.5"
+                    >
+                      <svg
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                        />
+                      </svg>
+                      Jupiter Narrative
+                    </div>
+                    <p
+                      class="leading-relaxed text-gray-200 font-normal normal-case whitespace-normal"
+                    >
+                      {{ narrativeData }}
+                    </p>
+                    <!-- Flowbite Tooltip Arrow (pointing up to icon) -->
+                    <div
+                      class="absolute bottom-full left-3 sm:left-1/2 sm:-translate-x-1/2 border-4 border-transparent border-b-gray-900/95"
+                    ></div>
+                  </div>
+                </div>
               </div>
               <p class="text-xs text-gray-400 font-mono mt-0.5 break-all">
                 {{ submittedAddress }}
