@@ -21,7 +21,6 @@ const feesData = ref(null);
 const meteoraPools = ref([]);
 const meteoraSortKey = ref("");
 const meteoraSortOrder = ref("desc");
-const holderProfiles = ref([]);
 const submittedAddress = ref("");
 const holdersData = ref([]);
 const totalHoldersCount = ref(0);
@@ -41,7 +40,7 @@ const chartPlatforms = [
 const currentChartEmbedUrl = computed(() => {
   if (!submittedAddress.value) return "";
   if (selectedChart.value === "gmgn") {
-    return `https://www.gmgn.cc/kline/sol/${submittedAddress.value}?theme=light`;
+    return `https://gmgn.ai/sol/token/${submittedAddress.value}`;
   }
   if (selectedChart.value === "geckoterminal") {
     return `https://www.geckoterminal.com/solana/tokens/${submittedAddress.value}?embed=1&info=0&swaps=0`;
@@ -143,93 +142,6 @@ const tokenSocials = computed(() => {
       });
   }
   return [];
-});
-
-const formattedHolderProfiles = computed(() => {
-  if (!holderProfiles.value) return [];
-
-  const dataObj = holderProfiles.value;
-  const tags =
-    dataObj.tags || dataObj.holder_summary || dataObj.items || dataObj;
-
-  const rawSummary = dataObj.holder_summary || dataObj.holderSummary || {};
-  const totalHolding = Number(
-    rawSummary.total_holding ||
-      rawSummary.totalHolding ||
-      dataObj.total_holding ||
-      dataObj.totalSupply ||
-      100,
-  );
-
-  const targets = [
-    { tag: "bundler", label: "Bundler", color: "amber" },
-    { tag: "sniper", label: "Sniper", color: "purple" },
-    { tag: "insider", label: "Insider", color: "red" },
-    { tag: "dev", label: "Dev", color: "blue" },
-    { tag: "smart_trader", label: "Smart Trader", color: "emerald" },
-  ];
-
-  return targets.map((target) => {
-    let count = 0;
-    let holdAmount = 0;
-    let explicitTotal = totalHolding;
-    let pct = 0;
-
-    const tagKey = target.tag;
-    const altKey = tagKey.replace("_", " ");
-
-    if (Array.isArray(tags)) {
-      const found = tags.find(
-        (t) =>
-          t.tag?.toLowerCase() === tagKey ||
-          t.tag?.toLowerCase() === altKey ||
-          t.name?.toLowerCase() === tagKey ||
-          t.name?.toLowerCase() === altKey,
-      );
-      if (found) {
-        count = found.holder_count ?? found.count ?? found.amount ?? 0;
-        holdAmount = found.hold_amount ?? found.amount ?? 0;
-        pct = found.percentage ?? found.pct ?? 0;
-        if (found.total_holding) explicitTotal = Number(found.total_holding);
-      }
-    } else if (typeof tags === "object" && tags !== null) {
-      const item = tags[tagKey] || tags[altKey] || {};
-      count =
-        item.holder_count ??
-        item.count ??
-        item.amount ??
-        (typeof item === "number" ? item : 0);
-      holdAmount =
-        item.hold_amount ??
-        item.amount ??
-        (typeof item === "number" ? item : 0);
-      pct = item.percentage ?? item.pct ?? 0;
-      if (item.total_holding) explicitTotal = Number(item.total_holding);
-
-      const summaryItem = rawSummary[tagKey] || rawSummary[altKey] || {};
-      if (typeof summaryItem === "object") {
-        if (!holdAmount && summaryItem.hold_amount)
-          holdAmount = summaryItem.hold_amount;
-        if (!count && summaryItem.count) count = summaryItem.count;
-        if (!pct && summaryItem.percentage) pct = summaryItem.percentage;
-        if (summaryItem.total_holding)
-          explicitTotal = Number(summaryItem.total_holding);
-      }
-    }
-
-    if (!pct && explicitTotal > 0 && holdAmount > 0) {
-      pct = (Number(holdAmount) / Number(explicitTotal)) * 100;
-    }
-
-    return {
-      tag: target.tag,
-      label: target.label,
-      color: target.color,
-      holder_count: Number(count),
-      hold_amount: Number(holdAmount),
-      percentage: Number(Number(pct).toFixed(2)),
-    };
-  });
 });
 
 const formatCurrency = (val) => {
@@ -380,7 +292,6 @@ const fetchScreeningData = async () => {
   solPriceUsd.value = 0;
   feesData.value = null;
   meteoraPools.value = [];
-  holderProfiles.value = [];
   holdersData.value = [];
   totalHoldersCount.value = 0;
   top10Percentage.value = 0;
@@ -456,39 +367,6 @@ const fetchScreeningData = async () => {
       insiderHolders.length,
     );
     insiderSupplyPct.value = Number(rawInsiderSupply.toFixed(2));
-
-    // Fetch Birdeye Holder Profile API (Simple Format)
-    try {
-      const apiKey =
-        (typeof process !== "undefined" && process.env?.BirdeyeApiKey) ||
-        import.meta.env?.VITE_Birdeye_Api_Key ||
-        "";
-
-      const options = {
-        method: "GET",
-        headers: {
-          "x-chain": "solana",
-          accept: "application/json",
-          "X-API-KEY": apiKey,
-        },
-      };
-
-      const res = await fetch(
-        `https://public-api.birdeye.so/token/v1/holder-profile?token_address=${address}&interval=1h&ui_amount_mode=raw&include_zero_balance=true`,
-        options,
-      );
-
-      if (res.ok && res.status !== 204) {
-        const json = await res.json();
-        holderProfiles.value = json.data;
-      }
-    } catch (err) {
-      console.error("Birdeye holder profile fetch error:", err);
-    }
-
-    if (!holderProfiles.value) {
-      holderProfiles.value = data;
-    }
 
     try {
       const dexResponse = await fetch(
@@ -577,7 +455,6 @@ const fetchScreeningData = async () => {
       );
       if (jupRes.ok) {
         const jupJson = await jupRes.json();
-        console.log("Jupiter Datapi Asset Search Data:", jupJson);
         const item = Array.isArray(jupJson) ? jupJson[0] : jupJson;
         if (item) {
           jupiterData.value = item;
@@ -695,7 +572,6 @@ const fetchScreeningData = async () => {
     meteoraData.value = null;
     jupiterData.value = null;
     meteoraPools.value = [];
-    holderProfiles.value = null;
     holdersData.value = [];
     totalHoldersCount.value = 0;
     top10Percentage.value = 0;
@@ -1258,135 +1134,6 @@ watch(
         </div>
       </div>
 
-      <!-- Holder Profile Card -->
-      <div
-        v-if="formattedHolderProfiles.length || submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
-      >
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-            <svg
-              class="w-5 h-5 text-indigo-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            Holder profile
-          </h2>
-          <span
-            class="text-xs font-semibold text-gray-500 bg-gray-100 px-2.5 py-1 rounded-full"
-          >
-            Tag & Distribution
-          </span>
-        </div>
-
-        <!-- Metrics Grid (bundler, sniper, insider, dev, smart trader) -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          <div
-            v-for="tg in formattedHolderProfiles"
-            :key="tg.tag"
-            class="p-3.5 bg-gray-50 rounded-xl border border-gray-100 flex flex-col justify-between hover:border-gray-200 transition"
-          >
-            <div>
-              <div class="flex items-center justify-between mb-1.5">
-                <p
-                  class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
-                >
-                  {{ tg.label }}
-                </p>
-                <span
-                  :class="[
-                    'text-[10px] font-bold px-1.5 py-0.5 rounded uppercase',
-                    tg.color === 'amber'
-                      ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                      : tg.color === 'purple'
-                        ? 'bg-purple-100 text-purple-800 border border-purple-200'
-                        : tg.color === 'red'
-                          ? 'bg-red-100 text-red-800 border border-red-200'
-                          : tg.color === 'blue'
-                            ? 'bg-blue-100 text-blue-800 border border-blue-200'
-                            : 'bg-emerald-100 text-emerald-800 border border-emerald-200',
-                  ]"
-                >
-                  Tag
-                </span>
-              </div>
-              <p
-                v-if="tg.tag === 'bundler'"
-                class="text-base font-bold text-gray-900 mt-1"
-              >
-                {{ tg.holder_count.toLocaleString("en-US") }}
-                <span class="text-xs font-normal text-gray-500">holders</span>
-              </p>
-              <p
-                v-else-if="tg.tag === 'sniper'"
-                class="text-base font-bold text-gray-900 mt-1"
-              >
-                {{ tg.holder_count.toLocaleString("en-US") }}
-                <span class="text-xs font-normal text-gray-500">holders</span>
-              </p>
-              <p
-                v-else-if="tg.tag === 'insider'"
-                class="text-base font-bold text-gray-900 mt-1"
-              >
-                {{ tg.holder_count.toLocaleString("en-US") }}
-                <span class="text-xs font-normal text-gray-500">holders</span>
-              </p>
-              <p
-                v-else-if="tg.tag === 'dev'"
-                class="text-base font-bold text-gray-900 mt-1"
-              >
-                {{ tg.holder_count.toLocaleString("en-US") }}
-                <span class="text-xs font-normal text-gray-500">holders</span>
-              </p>
-              <p
-                v-else-if="tg.tag === 'smart_trader'"
-                class="text-base font-bold text-gray-900 mt-1"
-              >
-                {{ tg.holder_count.toLocaleString("en-US") }}
-                <span class="text-xs font-normal text-gray-500">holders</span>
-              </p>
-            </div>
-
-            <!-- Holding Percentage & Progress Bar -->
-            <div class="mt-3 pt-2.5 border-t border-gray-200/70 space-y-1.5">
-              <div class="flex items-center justify-between text-xs">
-                <span class="text-gray-500 font-medium">Holding Share</span>
-                <span class="font-bold text-gray-800"
-                  >{{ tg.percentage }}%</span
-                >
-              </div>
-              <div
-                class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden"
-              >
-                <div
-                  :class="[
-                    'h-1.5 rounded-full transition-all duration-500',
-                    tg.color === 'amber'
-                      ? 'bg-amber-500'
-                      : tg.color === 'purple'
-                        ? 'bg-purple-500'
-                        : tg.color === 'red'
-                          ? 'bg-red-500'
-                          : tg.color === 'blue'
-                            ? 'bg-blue-500'
-                            : 'bg-emerald-500',
-                  ]"
-                  :style="{ width: Math.min(tg.percentage || 0, 100) + '%' }"
-                ></div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <!-- Jupiter Data Card (Positioned above Meteora Data) -->
       <div
         v-if="jupiterData"
@@ -1556,7 +1303,8 @@ watch(
             <p
               :class="[
                 'text-[11px] font-semibold uppercase tracking-wider',
-                jupiterData.holderCount != null && jupiterData.holderCount >= 1000
+                jupiterData.holderCount != null &&
+                jupiterData.holderCount >= 1000
                   ? 'text-emerald-600'
                   : 'text-red-600',
               ]"

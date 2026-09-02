@@ -13,11 +13,11 @@ Metvald is a comprehensive web application for Solana token analytics and Meteor
 ## 🔌 Integrations
 
 - **Meteora DLMM API**: Liquidity pool metrics, base/dynamic fees, and TVL tracking.
-- **Birdeye API**: Token holder profiles and supply distribution analytics.
 - **DexScreener API**: Real-time token pair profiles and embedded chart feeds.
-- **Rugcheck.xyz**: Contract security and risk assessment audits.
-- **Jupiter API**: Solana asset metadata and pricing feeds.
+- **Rugcheck.xyz**: Contract security, top holders distribution, and risk assessment audits.
+- **Jupiter Datapi**: Solana asset metadata, holder counts, organic scoring, and audit metrics.
 - **GeckoTerminal & GMGN.ai**: Embedded trading chart widgets.
+
 
 ## 🛠️ Tech Stack
 
@@ -25,14 +25,6 @@ Metvald is a comprehensive web application for Solana token analytics and Meteor
 - **State & Router**: Pinia + Vue Router 4
 - **Styling**: Tailwind CSS v4
 - **Utilities**: `@vueuse/core`, SweetAlert2
-
-## 🔑 Environment Setup
-
-Create a `.env` file in the project root directory (refer to `.env.example`):
-
-```env
-VITE_Birdeye_Api_Key=your_birdeye_api_key_here
-```
 
 ## 📦 Installation & Running Locally
 
