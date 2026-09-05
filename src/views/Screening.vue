@@ -498,7 +498,6 @@ const fetchScreeningData = async () => {
       );
       if (mobulaRes.ok) {
         const mobulaJson = await mobulaRes.json();
-        console.log("Mobula Token Details:", mobulaJson);
         if (mobulaJson && mobulaJson.data) {
           mobulaData.value = mobulaJson.data;
         }
@@ -1966,7 +1965,10 @@ watch(
               {{ formatPercent(mobulaData.bundlersHoldingsPercentage) }}
             </p>
             <p
-              v-if="mobulaData.bundlersCount !== undefined && mobulaData.bundlersCount !== null"
+              v-if="
+                mobulaData.bundlersCount !== undefined &&
+                mobulaData.bundlersCount !== null
+              "
               class="text-[10px] opacity-80 mt-1"
             >
               {{ mobulaData.bundlersCount }} wallets
@@ -1977,14 +1979,19 @@ watch(
           <div
             class="p-3 rounded-xl border transition-colors bg-blue-50 border-blue-200 text-blue-700"
           >
-            <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+            <p
+              class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider"
+            >
               Insider
             </p>
             <p class="text-sm font-bold mt-0.5">
               {{ formatPercent(mobulaData.insidersHoldingsPercentage) }}
             </p>
             <p
-              v-if="mobulaData.insidersCount !== undefined && mobulaData.insidersCount !== null"
+              v-if="
+                mobulaData.insidersCount !== undefined &&
+                mobulaData.insidersCount !== null
+              "
               class="text-[10px] text-blue-600 opacity-80 mt-1"
             >
               {{ mobulaData.insidersCount }} wallets
@@ -2019,14 +2026,19 @@ watch(
           <div
             class="p-3 rounded-xl border transition-colors bg-blue-50 border-blue-200 text-blue-700"
           >
-            <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+            <p
+              class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider"
+            >
               Fresh Trader
             </p>
             <p class="text-sm font-bold mt-0.5">
               {{ formatPercent(mobulaData.freshTradersHoldingsPercentage) }}
             </p>
             <p
-              v-if="mobulaData.freshTradersCount !== undefined && mobulaData.freshTradersCount !== null"
+              v-if="
+                mobulaData.freshTradersCount !== undefined &&
+                mobulaData.freshTradersCount !== null
+              "
               class="text-[10px] text-blue-600 opacity-80 mt-1"
             >
               {{ mobulaData.freshTradersCount }} wallets
