@@ -15,6 +15,7 @@ const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
+const mobulaData = ref(null);
 const jupiterData = ref(null);
 const narrativeData = ref(null);
 const solPriceUsd = ref(0);
@@ -161,6 +162,11 @@ const formatSol = (val) => {
   );
 };
 
+const formatPercent = (val) => {
+  if (val === undefined || val === null || isNaN(val)) return "N/A";
+  return Number(val).toFixed(2) + "%";
+};
+
 const formatAge = (createdAt) => {
   if (!createdAt) return "N/A";
   const diffMs = Date.now() - createdAt;
@@ -289,6 +295,7 @@ const fetchScreeningData = async () => {
   riskDetails.value = null;
   dexscreenerData.value = null;
   meteoraData.value = null;
+  mobulaData.value = null;
   jupiterData.value = null;
   narrativeData.value = null;
   solPriceUsd.value = 0;
@@ -473,7 +480,6 @@ const fetchScreeningData = async () => {
       );
       if (narrativeRes.ok) {
         const narrativeJson = await narrativeRes.json();
-        console.log("Jupiter Narrative Data:", narrativeJson);
         if (narrativeJson && narrativeJson.narrative) {
           const text = String(narrativeJson.narrative).trim();
           if (text && !text.toLowerCase().includes("generating narrative")) {
@@ -483,6 +489,22 @@ const fetchScreeningData = async () => {
       }
     } catch (err) {
       console.log("Jupiter Narrative fetch (non-critical):", err);
+    }
+
+    // Fetch Mobula Token Details
+    try {
+      const mobulaRes = await fetch(
+        `https://demo-api.mobula.io/api/2/token/details?blockchain=solana&address=${address}&currencies=EUR,USD`,
+      );
+      if (mobulaRes.ok) {
+        const mobulaJson = await mobulaRes.json();
+        console.log("Mobula Token Details:", mobulaJson);
+        if (mobulaJson && mobulaJson.data) {
+          mobulaData.value = mobulaJson.data;
+        }
+      }
+    } catch (err) {
+      console.log("Mobula fetch (non-critical):", err);
     }
 
     // Fetch Real-time SOL Price in USD
@@ -591,6 +613,7 @@ const fetchScreeningData = async () => {
     riskDetails.value = null;
     dexscreenerData.value = null;
     meteoraData.value = null;
+    mobulaData.value = null;
     jupiterData.value = null;
     narrativeData.value = null;
     meteoraPools.value = [];
@@ -799,10 +822,7 @@ watch(
                   class="inline-flex items-center text-blue-500"
                   title="Verified on Jupiter"
                 >
-                  <svg
-                    class="w-4.5 h-4.5 fill-current"
-                    viewBox="0 0 20 20"
-                  >
+                  <svg class="w-4.5 h-4.5 fill-current" viewBox="0 0 20 20">
                     <path
                       fill-rule="evenodd"
                       d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -1893,6 +1913,123 @@ watch(
             <p class="text-red-700 mt-0.5">
               Data fees tidak dapat dihitung atau ditampilkan tanpa harga SOL.
               Silakan reload halaman.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Mobula Data Card (Positioned below Meteora Data) -->
+      <div
+        v-if="mobulaData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-indigo-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"
+              />
+            </svg>
+            Mobula Data
+          </h2>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-3">
+          <!-- Bundler -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              (mobulaData.bundlersHoldingsPercentage || 0) >= 50
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-blue-50 border-blue-200 text-blue-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                (mobulaData.bundlersHoldingsPercentage || 0) >= 50
+                  ? 'text-red-600'
+                  : 'text-blue-600',
+              ]"
+            >
+              Bundler
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatPercent(mobulaData.bundlersHoldingsPercentage) }}
+            </p>
+            <p
+              v-if="mobulaData.bundlersCount !== undefined && mobulaData.bundlersCount !== null"
+              class="text-[10px] opacity-80 mt-1"
+            >
+              {{ mobulaData.bundlersCount }} wallets
+            </p>
+          </div>
+
+          <!-- Insider -->
+          <div
+            class="p-3 rounded-xl border transition-colors bg-blue-50 border-blue-200 text-blue-700"
+          >
+            <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+              Insider
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatPercent(mobulaData.insidersHoldingsPercentage) }}
+            </p>
+            <p
+              v-if="mobulaData.insidersCount !== undefined && mobulaData.insidersCount !== null"
+              class="text-[10px] text-blue-600 opacity-80 mt-1"
+            >
+              {{ mobulaData.insidersCount }} wallets
+            </p>
+          </div>
+
+          <!-- Dev -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              (mobulaData.devHoldingsPercentage || 0) > 0
+                ? 'bg-amber-50 border-amber-200 text-amber-700'
+                : 'bg-blue-50 border-blue-200 text-blue-700',
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                (mobulaData.devHoldingsPercentage || 0) > 0
+                  ? 'text-amber-600'
+                  : 'text-blue-600',
+              ]"
+            >
+              Dev
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatPercent(mobulaData.devHoldingsPercentage) }}
+            </p>
+          </div>
+
+          <!-- Fresh Trader -->
+          <div
+            class="p-3 rounded-xl border transition-colors bg-blue-50 border-blue-200 text-blue-700"
+          >
+            <p class="text-[11px] font-semibold text-blue-600 uppercase tracking-wider">
+              Fresh Trader
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{ formatPercent(mobulaData.freshTradersHoldingsPercentage) }}
+            </p>
+            <p
+              v-if="mobulaData.freshTradersCount !== undefined && mobulaData.freshTradersCount !== null"
+              class="text-[10px] text-blue-600 opacity-80 mt-1"
+            >
+              {{ mobulaData.freshTradersCount }} wallets
             </p>
           </div>
         </div>
