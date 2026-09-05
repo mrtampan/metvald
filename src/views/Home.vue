@@ -18,7 +18,7 @@
             Solana & Meteora Token Screening & Market Intelligence
           </h1>
           <p class="mt-4 text-base md:text-lg text-gray-600 leading-relaxed">
-            Platform analisis & screening token Solana terlengkap. Evaluasi risiko rugcheck, analisis profil holder & insider, embed chart 3 platform (DexScreener, GMGN, GeckoTerminal), scanner pool Meteora DLMM dengan filter preset, serta list token DexScreener ber-profile centang.
+            Comprehensive Solana token screening & analytics platform. Evaluate rugcheck risk, analyze holder & insider profiles, embed multi-platform charts (DexScreener, GMGN, GeckoTerminal), scan Meteora DLMM pools with preset filters, and view verified DexScreener token profiles.
           </p>
 
           <!-- Simple Search Bar -->
@@ -72,13 +72,13 @@
         <div class="flex items-center justify-between">
           <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
             <span>🕒</span>
-            <span>Riwayat Screening Terakhir</span>
+            <span>Recent Screening History</span>
           </h2>
           <button 
             @click="screeningStore.clearScreeningHistory()" 
             class="text-xs text-gray-500 hover:text-red-600 transition"
           >
-            Hapus Riwayat
+            Clear History
           </button>
         </div>
         <div class="flex flex-wrap gap-2">
@@ -99,7 +99,7 @@
       <section class="space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-xl font-bold text-gray-800">
-            Fitur Utama & Pembaruan Terkini
+            Key Features & Latest Updates
           </h2>
           <span class="text-xs text-gray-500 font-medium">Metvald Platform Features</span>
         </div>
@@ -113,7 +113,7 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900">DexScreener Verified List</h3>
             <p class="text-sm text-gray-600">
-              Filter token Solana ber-profile resmi ("Profile Centang") secara real-time dari DexScreener, disaring berdasar Market Cap, Volume 24h & 5m, serta token boosted.
+              Filter Solana tokens with official verified profiles in real-time from DexScreener, filtered by Market Cap, 24h & 5m Volume, and boosted tokens.
             </p>
           </div>
 
@@ -125,7 +125,7 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900">DLMM Scanner & Presets</h3>
             <p class="text-sm text-gray-600">
-              Scanning pool Meteora aktif secara otomatis menggunakan preset filter kustom (Default & Custom Presets) berdasar TVL aktif, usia token, jumlah holder, volume, dan score organik.
+              Automatically scan active Meteora pools using custom filter presets based on active TVL, token age, holder count, volume, and organic score.
             </p>
           </div>
 
@@ -135,9 +135,9 @@
               <span>📈</span>
               <span>Multi-Platform Charts</span>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Embed Chart 3 Platform</h3>
+            <h3 class="text-lg font-bold text-gray-900">Multi-Platform Chart Embed</h3>
             <p class="text-sm text-gray-600">
-              Integrasi live chart interaktif dari DexScreener, GMGN.ai, dan GeckoTerminal yang dapat diganti secara instan dalam 1 halaman.
+              Interactive live chart integration from DexScreener, GMGN.ai, and GeckoTerminal, instantly switchable on a single page.
             </p>
           </div>
 
@@ -149,7 +149,7 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900">Holder & Insider Profiling</h3>
             <p class="text-sm text-gray-600">
-              Deteksi otomatis kategori wallet: Dev Wallets, Snipers, Insiders, Bundlers, dan Smart Traders, beserta persentase konsentrasi suplai Top 10% & Top 20%.
+              Automatic detection of wallet categories: Dev Wallets, Snipers, Insiders, Bundlers, and Smart Traders, alongside Top 10% & Top 20% supply concentration percentages.
             </p>
           </div>
 
@@ -161,7 +161,7 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900">Contract Security Audit</h3>
             <p class="text-sm text-gray-600">
-              Verifikasi Mint Authority, Freeze Authority, persentase LP burn / lock, serta skor tingkat risiko keamanan smart contract token dari Rugcheck.
+              Verify Mint Authority, Freeze Authority, LP burn / lock percentage, and smart contract security risk score from Rugcheck.
             </p>
           </div>
 
@@ -173,7 +173,7 @@
             </div>
             <h3 class="text-lg font-bold text-gray-900">Meteora Fee Analytics</h3>
             <p class="text-sm text-gray-600">
-              Pemantauan total fee LP 24h (USD/SOL), Base Fee rate, Dynamic Fee scaling multiplier, dan rasio Fee/TVL untuk proyeksi yield optimal.
+              Monitor total 24h LP fees (USD/SOL), Base Fee rate, Dynamic Fee scaling multiplier, and Fee/TVL ratio for optimal yield projections.
             </p>
           </div>
 
@@ -183,9 +183,9 @@
               <span>🔗</span>
               <span>External Visualizers</span>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Integrasi Platform Visualisasi & Trading</h3>
+            <h3 class="text-lg font-bold text-gray-900">Visualization & Trading Integration</h3>
             <p class="text-sm text-gray-600">
-              Akses cepat 1-klik langsung ke Bubblemaps (peta visual hubungan wallet holder), Fabriq Trade, Axiom Trade, dan GMGN untuk analisa wallet cluster secara mendalam.
+              1-click quick access to Bubblemaps (holder wallet visual mapping), Fabriq Trade, Axiom Trade, and GMGN for in-depth wallet cluster analysis.
             </p>
           </div>
         </div>
