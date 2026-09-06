@@ -10,12 +10,6 @@
         <!-- Desktop Menu -->
         <div class="hidden md:flex space-x-8">
           <RouterLink
-            to="/"
-            class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium"
-          >
-            Home
-          </RouterLink>
-          <RouterLink
             to="/token-list"
             class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium"
           >
@@ -91,7 +85,6 @@
         >
           Dexscreener List
         </RouterLink>
-
       </div>
     </div>
   </nav>

@@ -651,11 +651,10 @@ onMounted(() => {
                 </svg>
               </div>
               <div>
-                <h2 class="text-lg font-bold text-gray-900">
-                  Filter Settings
-                </h2>
+                <h2 class="text-lg font-bold text-gray-900">Filter Settings</h2>
                 <p class="text-xs text-gray-500">
-                  Adjust filter criteria. Changes to inputs will be applied immediately.
+                  Adjust filter criteria. Changes to inputs will be applied
+                  immediately.
                 </p>
               </div>
             </div>
@@ -1473,7 +1472,6 @@ onMounted(() => {
                     </svg>
                   </div>
                 </th>
-
                 <!-- MarketCap -->
                 <th
                   @click="sortBy('market_cap')"
@@ -1523,16 +1521,14 @@ onMounted(() => {
                     </svg>
                   </div>
                 </th>
-
-                <!-- Action -->
-                <th class="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-100 text-sm">
               <tr
                 v-for="(pool, index) in paginatedPools"
                 :key="pool.pool_address || index"
-                class="hover:bg-gray-50 transition"
+                @click="goToScreening(getBaseToken(pool)?.address)"
+                class="hover:bg-blue-50/50 cursor-pointer transition"
               >
                 <!-- # Index -->
                 <td
@@ -1566,7 +1562,9 @@ onMounted(() => {
                     </div>
 
                     <div>
-                      <div class="font-bold text-gray-900">
+                      <div
+                        class="font-bold text-gray-900 group-hover:text-blue-600"
+                      >
                         {{
                           pool.name ||
                           `${pool.token_x?.symbol}-${pool.token_y?.symbol}`
@@ -1577,7 +1575,7 @@ onMounted(() => {
                       >
                         <span>{{ getBaseToken(pool)?.symbol }}</span>
                         <button
-                          @click="
+                          @click.stop="
                             copyToClipboard(
                               getBaseToken(pool)?.address || pool.pool_address,
                             )
@@ -1614,6 +1612,7 @@ onMounted(() => {
                       <div class="flex items-center gap-0.5 mt-1.5">
                         <!-- Bubblemaps Link -->
                         <a
+                          @click.stop=""
                           :href="`https://v2.bubblemaps.io/map?address=${getBaseToken(pool)?.address || pool.pool_address}&chain=solana`"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1629,6 +1628,7 @@ onMounted(() => {
 
                         <!-- Fabriq Link -->
                         <a
+                          @click.stop=""
                           :href="`https://fabriq.trade/trending?includeTokens=${getBaseToken(pool)?.address || pool.pool_address}`"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1644,6 +1644,7 @@ onMounted(() => {
 
                         <!-- Axiom Link -->
                         <a
+                          @click.stop=""
                           :href="`https://axiom.trade/t/${getBaseToken(pool)?.address || pool.pool_address}/`"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1659,6 +1660,7 @@ onMounted(() => {
 
                         <!-- GMGN Link -->
                         <a
+                          @click.stop=""
                           :href="`https://gmgn.ai/sol/token/${getBaseToken(pool)?.address || pool.pool_address}`"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1674,6 +1676,7 @@ onMounted(() => {
 
                         <!-- Meteora Link -->
                         <a
+                          @click.stop=""
                           :href="`https://app.meteora.ag/dlmm/${pool.pool_address}`"
                           target="_blank"
                           rel="noopener noreferrer"
@@ -1729,36 +1732,6 @@ onMounted(() => {
                     )
                   }}
                 </td>
-
-                <!-- Action -->
-                <td class="py-3 px-4 text-right">
-                  <div
-                    class="flex items-center justify-end gap-1.5 whitespace-nowrap"
-                  >
-                    <!-- Screening Link (New Tab) -->
-                    <a
-                      :href="`/screening?token=${getBaseToken(pool)?.address}`"
-                      rel="noopener noreferrer"
-                      class="inline-flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-2.5 py-1.5 rounded-lg shadow-xs transition"
-                      title="Screening"
-                    >
-                      Screening
-                      <svg
-                        class="w-3 h-3 opacity-80"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          stroke-linecap="round"
-                          stroke-linejoin="round"
-                          stroke-width="2"
-                          d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                        />
-                      </svg>
-                    </a>
-                  </div>
-                </td>
               </tr>
             </tbody>
           </table>
@@ -1791,7 +1764,9 @@ onMounted(() => {
               -
               <span class="font-bold text-gray-800">{{ showingEnd }}</span>
               of
-              <span class="font-bold text-gray-800">{{ filteredPools.length }}</span>
+              <span class="font-bold text-gray-800">{{
+                filteredPools.length
+              }}</span>
               pools
             </div>
           </div>
@@ -1871,7 +1846,8 @@ onMounted(() => {
       <div class="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl space-y-4">
         <h3 class="text-lg font-bold text-gray-900">Save Custom Preset</h3>
         <p class="text-xs text-gray-500">
-          Save the currently active filter settings as a custom preset in your browser (localStorage).
+          Save the currently active filter settings as a custom preset in your
+          browser (localStorage).
         </p>
 
         <div>
