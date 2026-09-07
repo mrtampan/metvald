@@ -1845,7 +1845,7 @@ watch(
                 <th class="py-3 px-4">Wallet Name</th>
                 <th class="py-3 px-4">Category</th>
                 <th class="py-3 px-4">Address</th>
-                <th class="py-3 px-4">Source Data</th>
+                <th class="py-3 px-4">Source Wallet</th>
                 <th class="py-3 px-4 text-right">Token Amount</th>
                 <th class="py-3 px-4 text-right">USD Amount</th>
               </tr>
