@@ -73,5 +73,15 @@
         "name": "Loganlim",
         "category": "neutral",
         "address": "4cdzCdpZpw476py42q3ChStwmHsYo4CfHroaQzsnMrSN"
+    },
+    {
+        "name": "Rasmr",
+        "category": "neutral",
+        "address": "9CNyLECt2j8tnDhqxtjYk5HUhZ2b8Nwnyb7sfYN7vND2"
+    },
+    {
+        "name": "TraderPow",
+        "category": "neutral",
+        "address": "7eNRALuXYUJkUWTvRj5tcB7tcT43kmT5SNdkfy9fKTto"
     }
 ]

@@ -583,7 +583,7 @@ const fetchScreeningData = async () => {
           ),
         ];
         if (uniqueAddresses.length > 0) {
-          const CHUNK_SIZE = 100;
+          const CHUNK_SIZE = 50;
           const chunks = [];
           for (let i = 0; i < uniqueAddresses.length; i += CHUNK_SIZE) {
             chunks.push(uniqueAddresses.slice(i, i + CHUNK_SIZE).join(","));
