@@ -2,6 +2,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useScreeningStore } from "../stores/screeningStore";
+import smartWalletAddress from "../smart_wallet/index.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -27,6 +28,83 @@ const submittedAddress = ref("");
 const holdersData = ref([]);
 const totalHoldersCount = ref(0);
 const top10Percentage = ref(0);
+const smartWalletData = ref([]);
+const isSmartWalletLoading = ref(false);
+
+const getCategoryBadgeClass = (category) => {
+  const cat = (category || "").toLowerCase().replace(/[^a-z]/g, "");
+  if (cat.includes("diamond")) {
+    return {
+      label: "Diamond Hand",
+      bgClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+    };
+  }
+  if (cat.includes("paper")) {
+    return {
+      label: "Paper Hand",
+      bgClass: "bg-red-50 text-red-700 border-red-200",
+    };
+  }
+  return {
+    label: category ? (cat === "neural" ? "Neutral" : category) : "Neutral",
+    bgClass: "bg-blue-50 text-blue-700 border-blue-200",
+  };
+};
+
+const smartWalletsWithInfo = computed(() => {
+  const list = smartWalletAddress || [];
+  if (!list.length) return [];
+  const holdersMap = new Map();
+  (smartWalletData.value || []).forEach((h) => {
+    if (h && h.address) {
+      holdersMap.set(h.address.toLowerCase(), h);
+    }
+  });
+
+  const price = Number(
+    jupiterData.value?.usdPrice ??
+      jupiterData.value?.price ??
+      dexscreenerData.value?.priceUsd ??
+      0,
+  );
+
+  return list
+    .map((item) => {
+      const holderInfo =
+        holdersMap.get((item.address || "").toLowerCase()) || null;
+      const amountVal =
+        holderInfo?.amount != null ? Number(holderInfo.amount) : 0;
+      const usdVal = price > 0 ? amountVal * price : null;
+      return {
+        name: item.name,
+        category: item.category || "neutral",
+        address: item.address,
+        amount: amountVal,
+        usdAmount: usdVal,
+        solBalanceDisplay:
+          holderInfo?.solBalanceDisplay != null
+            ? Number(holderInfo.solBalanceDisplay)
+            : null,
+        lastActiveTime: holderInfo?.lastActiveTime || null,
+        addressInfo: holderInfo?.addressInfo || null,
+        holderTags: holderInfo?.holderTags || [],
+        isHolding: amountVal > 0,
+      };
+    })
+    .filter((wallet) => wallet.amount > 0);
+});
+
+const smartWalletSummary = computed(() => {
+  const totalTracked = smartWalletAddress ? smartWalletAddress.length : 0;
+  const list = smartWalletsWithInfo.value;
+  const holdingCount = list.length;
+  const totalAmount = list.reduce((sum, w) => sum + (w.amount || 0), 0);
+  return {
+    totalTracked,
+    holdingCount,
+    totalAmount,
+  };
+});
 
 const insiderWalletsCount = ref(0);
 const insiderSupplyPct = ref(0);
@@ -304,6 +382,7 @@ const fetchScreeningData = async () => {
   holdersData.value = [];
   totalHoldersCount.value = 0;
   top10Percentage.value = 0;
+  smartWalletData.value = [];
   submittedAddress.value = address;
 
   try {
@@ -491,6 +570,31 @@ const fetchScreeningData = async () => {
       console.log("Jupiter Narrative fetch (non-critical):", err);
     }
 
+    // Fetch Smart Wallet Holders Data
+    smartWalletData.value = [];
+    isSmartWalletLoading.value = true;
+    try {
+      if (smartWalletAddress && smartWalletAddress.length > 0) {
+        const addressesParam = smartWalletAddress
+          .map((w) => w.address)
+          .filter(Boolean)
+          .join(",");
+        if (addressesParam) {
+          const smartWalletRes = await fetch(
+            `https://datapi.jup.ag/v1/holders/${address}?addresses=${addressesParam}`,
+          );
+          if (smartWalletRes.ok) {
+            const smartWalletJson = await smartWalletRes.json();
+            smartWalletData.value = smartWalletJson.holders || [];
+          }
+        }
+      }
+    } catch (err) {
+      console.log("Smart Wallet Holders fetch (non-critical):", err);
+    } finally {
+      isSmartWalletLoading.value = false;
+    }
+
     // Fetch Mobula Token Details
     try {
       const mobulaRes = await fetch(
@@ -619,6 +723,7 @@ const fetchScreeningData = async () => {
     holdersData.value = [];
     totalHoldersCount.value = 0;
     top10Percentage.value = 0;
+    smartWalletData.value = [];
     submittedAddress.value = "";
   } finally {
     isLoading.value = false;
@@ -1667,6 +1772,158 @@ watch(
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Smart Wallet List Card -->
+      <div
+        v-if="submittedAddress"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <svg
+              class="w-5 h-5 text-purple-600"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a1 1 0 11-2 0 1 1 0 012 0z"
+              />
+            </svg>
+            Smart Wallet List
+          </h2>
+
+          <div class="flex items-center gap-2 flex-wrap">
+            <span
+              class="text-xs font-semibold px-2.5 py-1 rounded-full bg-purple-50 text-purple-700 border border-purple-200"
+            >
+              {{ smartWalletSummary.totalTracked }} Wallets Tracked
+            </span>
+            <span
+              :class="[
+                'text-xs font-semibold px-2.5 py-1 rounded-full border',
+                smartWalletSummary.holdingCount > 0
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                  : 'bg-gray-100 text-gray-600 border-gray-200',
+              ]"
+            >
+              {{ smartWalletSummary.holdingCount }} Holding Token
+            </span>
+          </div>
+        </div>
+
+        <!-- Table Container -->
+        <div class="overflow-x-auto rounded-xl border border-gray-200">
+          <table class="w-full text-left border-collapse min-w-[750px]">
+            <thead>
+              <tr
+                class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none"
+              >
+                <th class="py-3 px-4">Wallet Name</th>
+                <th class="py-3 px-4">Category</th>
+                <th class="py-3 px-4">Address</th>
+                <th class="py-3 px-4 text-right">Token Amount</th>
+                <th class="py-3 px-4 text-right">USD Amount</th>
+              </tr>
+            </thead>
+            <tbody
+              class="divide-y divide-gray-100 text-xs font-medium text-gray-700"
+            >
+              <tr v-if="smartWalletsWithInfo.length === 0">
+                <td
+                  colspan="5"
+                  class="py-6 px-4 text-center text-gray-500 font-medium"
+                >
+                  Tidak ada smart wallet yang memegang token ini
+                </td>
+              </tr>
+              <tr
+                v-for="wallet in smartWalletsWithInfo"
+                :key="wallet.address"
+                class="hover:bg-gray-50/80 transition"
+              >
+                <!-- Name -->
+                <td class="py-3 px-4 font-bold text-gray-900">
+                  <div class="flex items-center gap-2">
+                    <span
+                      class="w-7 h-7 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs shadow-2xs"
+                    >
+                      {{ (wallet.name || "W").charAt(0).toUpperCase() }}
+                    </span>
+                    <div>
+                      <span class="text-sm font-bold text-gray-900">{{
+                        wallet.name
+                      }}</span>
+                      <div
+                        v-if="wallet.isHolding"
+                        class="text-[10px] font-semibold text-emerald-600"
+                      >
+                        Holder
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Category -->
+                <td class="py-3 px-4">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border capitalize',
+                      getCategoryBadgeClass(wallet.category).bgClass,
+                    ]"
+                  >
+                    {{ getCategoryBadgeClass(wallet.category).label }}
+                  </span>
+                </td>
+
+                <!-- Address -->
+                <td class="py-3 px-4 font-mono text-gray-600">
+                  <div class="flex items-center gap-1.5">
+                    <span>
+                      {{ wallet.address.slice(0, 4) }}...{{
+                        wallet.address.slice(-4)
+                      }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Token Amount -->
+                <td
+                  :class="[
+                    'py-3 px-4 text-right font-mono font-semibold',
+                    wallet.amount > 0
+                      ? 'text-emerald-600 font-bold'
+                      : 'text-gray-400',
+                  ]"
+                >
+                  {{
+                    wallet.amount != null
+                      ? Number(wallet.amount).toLocaleString("en-US", {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })
+                      : "0.00"
+                  }}
+                </td>
+
+                <!-- USD Amount -->
+                <td
+                  class="py-3 px-4 text-right font-mono font-semibold text-gray-900"
+                >
+                  {{
+                    wallet.usdAmount != null
+                      ? formatCurrency(wallet.usdAmount)
+                      : "N/A"
+                  }}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
 
