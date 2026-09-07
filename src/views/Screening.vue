@@ -46,7 +46,7 @@ const getCategoryBadgeClass = (category) => {
     };
   }
   return {
-    label: category ? (cat === "neural" ? "Neutral" : category) : "Neutral",
+    label: category ? (cat === "neutral" ? "Neutral" : category) : "Neutral",
     bgClass: "bg-blue-50 text-blue-700 border-blue-200",
   };
 };

@@ -6,12 +6,12 @@
     },
     {
         "name": "Frankdegod",
-        "category": "neural",
+        "category": "neutral",
         "address": "498g1rVnFcnjBjpfw1xyqA1WvgQXUU8RWuELjxkjAayQ"
     },
     {
         "name": "Rosecalender",
-        "category": "neural",
+        "category": "neutral",
         "address": "DxM1hfY8FQ8dNGrucuJzhJcF8KRbjk8WBwrgKvQ9spPv"
     },
     {
@@ -28,5 +28,50 @@
         "name": "PoorGoat",
         "category": "diamond-hand",
         "address": "HDixbrzwwLXczhDBk1JVrurPQsuLE8FUKnW2pucSXN3o"
+    },
+    {
+        "name": "TheSolstice",
+        "category": "diamond-hand",
+        "address": "4ugDhHJ8XDXAeABmrNmGffFaLbJb9BkPyiFGVSV9ocwo"
+    },
+    {
+        "name": "Pointfarmcap",
+        "category": "diamond-hand",
+        "address": "Beqv6dzTcjV2eodo8RRXCiCcnSYrS1vkQKhfqwHXqeit"
+    },
+    {
+        "name": "Aurelius0121",
+        "category": "diamond-hand",
+        "address": "9BMzTpSo4URse1oN666pmexhdjpU1vA5p7LtroCFQdLU"
+    },
+    {
+        "name": "Rowdy",
+        "category": "neutral",
+        "address": "CzU8MaRcwvwUoNkwJFLbvtFWJugcEXAhDDQqNFE4ybb7"
+    },
+    {
+        "name": "ethermonk",
+        "category": "diamond-hand",
+        "address": "2xUbYAVq1oJGj45d6JjnaYHAke3NQecUcqWvvVbwmYw8"
+    },
+    {
+        "name": "Jotagezin",
+        "category": "neutral",
+        "address": "4hwPamSooBr5JhxHdcEC21HoxN5HUwYR2hGucLPyZAi8"
+    },
+    {
+        "name": "Squid",
+        "category": "neutral",
+        "address": "F1a7cR49s7VsKz8XGanFBfsbNE2M91hgKkkDhDjv44w6"
+    },
+    {
+        "name": "Dipwheeler",
+        "category": "neutral",
+        "address": "BMgsHTvcasRVtuevHJh8t6Vf5dmcWkDLAx6gSAQ3dsYm"
+    },
+    {
+        "name": "Loganlim",
+        "category": "neutral",
+        "address": "4cdzCdpZpw476py42q3ChStwmHsYo4CfHroaQzsnMrSN"
     }
 ]
