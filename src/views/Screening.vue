@@ -69,16 +69,18 @@ const smartWalletsWithInfo = computed(() => {
   );
 
   return list
-    .map((item) => {
+    .map((item, idx) => {
       const holderInfo =
         holdersMap.get((item.address || "").toLowerCase()) || null;
       const amountVal =
         holderInfo?.amount != null ? Number(holderInfo.amount) : 0;
       const usdVal = price > 0 ? amountVal * price : null;
       return {
+        id: `${item.address}-${item.source || "metvald"}-${idx}`,
         name: item.name,
         category: item.category || "neutral",
         address: item.address,
+        source: item.source || "metvald",
         amount: amountVal,
         usdAmount: usdVal,
         solBalanceDisplay:
@@ -575,18 +577,34 @@ const fetchScreeningData = async () => {
     isSmartWalletLoading.value = true;
     try {
       if (smartWalletAddress && smartWalletAddress.length > 0) {
-        const addressesParam = smartWalletAddress
-          .map((w) => w.address)
-          .filter(Boolean)
-          .join(",");
-        if (addressesParam) {
-          const smartWalletRes = await fetch(
-            `https://datapi.jup.ag/v1/holders/${address}?addresses=${addressesParam}`,
-          );
-          if (smartWalletRes.ok) {
-            const smartWalletJson = await smartWalletRes.json();
-            smartWalletData.value = smartWalletJson.holders || [];
+        const uniqueAddresses = [
+          ...new Set(
+            smartWalletAddress.map((w) => w.address).filter(Boolean),
+          ),
+        ];
+        if (uniqueAddresses.length > 0) {
+          const CHUNK_SIZE = 100;
+          const chunks = [];
+          for (let i = 0; i < uniqueAddresses.length; i += CHUNK_SIZE) {
+            chunks.push(uniqueAddresses.slice(i, i + CHUNK_SIZE).join(","));
           }
+          const results = await Promise.all(
+            chunks.map(async (chunk) => {
+              try {
+                const res = await fetch(
+                  `https://datapi.jup.ag/v1/holders/${address}?addresses=${chunk}`,
+                );
+                if (res.ok) {
+                  const json = await res.json();
+                  return json.holders || [];
+                }
+              } catch (err) {
+                console.log("Smart Wallet Holders chunk fetch error:", err);
+              }
+              return [];
+            }),
+          );
+          smartWalletData.value = results.flat();
         }
       }
     } catch (err) {
@@ -1827,6 +1845,7 @@ watch(
                 <th class="py-3 px-4">Wallet Name</th>
                 <th class="py-3 px-4">Category</th>
                 <th class="py-3 px-4">Address</th>
+                <th class="py-3 px-4">Source Data</th>
                 <th class="py-3 px-4 text-right">Token Amount</th>
                 <th class="py-3 px-4 text-right">USD Amount</th>
               </tr>
@@ -1836,7 +1855,7 @@ watch(
             >
               <tr v-if="smartWalletsWithInfo.length === 0">
                 <td
-                  colspan="5"
+                  colspan="6"
                   class="py-6 px-4 text-center text-gray-500 font-medium"
                 >
                   Tidak ada smart wallet yang memegang token ini
@@ -1844,7 +1863,7 @@ watch(
               </tr>
               <tr
                 v-for="wallet in smartWalletsWithInfo"
-                :key="wallet.address"
+                :key="wallet.id"
                 class="hover:bg-gray-50/80 transition"
               >
                 <!-- Name -->
@@ -1890,6 +1909,20 @@ watch(
                       }}
                     </span>
                   </div>
+                </td>
+
+                <!-- Source Data -->
+                <td class="py-3 px-4">
+                  <span
+                    :class="[
+                      'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold border',
+                      wallet.source === 'metvald'
+                        ? 'bg-purple-50 text-purple-700 border-purple-200'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                    ]"
+                  >
+                    {{ wallet.source }}
+                  </span>
                 </td>
 
                 <!-- Token Amount -->

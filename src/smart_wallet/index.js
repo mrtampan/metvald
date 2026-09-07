@@ -1,3 +1,14 @@
-import smartWalletData from "../../smartwallet/data.json";
+import metvaldData from "../../smartwallet/data.json";
+import meteoraidnData from "../../smartwallet/meteoraidn.json";
 
-export default smartWalletData;
+const formattedMetvald = metvaldData.map((item) => ({
+  ...item,
+  source: "metvald",
+}));
+
+const formattedMeteoraidn = meteoraidnData.map((item) => ({
+  ...item,
+  source: "meteoraidn",
+}));
+
+export default [...formattedMetvald, ...formattedMeteoraidn];
