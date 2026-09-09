@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useScreeningStore } from "../stores/screeningStore";
-import smartWalletAddress from "../smart_wallet/index.js";
+import { getSmartWallets } from "../smart_wallet/index.js";
 
 const route = useRoute();
 const router = useRouter();
@@ -28,6 +28,7 @@ const submittedAddress = ref("");
 const holdersData = ref([]);
 const totalHoldersCount = ref(0);
 const top10Percentage = ref(0);
+const smartWalletList = ref([]);
 const smartWalletData = ref([]);
 const isSmartWalletLoading = ref(false);
 
@@ -52,7 +53,7 @@ const getCategoryBadgeClass = (category) => {
 };
 
 const smartWalletsWithInfo = computed(() => {
-  const list = smartWalletAddress || [];
+  const list = smartWalletList.value || [];
   if (!list.length) return [];
   const holdersMap = new Map();
   (smartWalletData.value || []).forEach((h) => {
@@ -97,7 +98,7 @@ const smartWalletsWithInfo = computed(() => {
 });
 
 const smartWalletSummary = computed(() => {
-  const totalTracked = smartWalletAddress ? smartWalletAddress.length : 0;
+  const totalTracked = smartWalletList.value ? smartWalletList.value.length : 0;
   const list = smartWalletsWithInfo.value;
   const holdingCount = list.length;
   const totalAmount = list.reduce((sum, w) => sum + (w.amount || 0), 0);
@@ -572,43 +573,15 @@ const fetchScreeningData = async () => {
       console.log("Jupiter Narrative fetch (non-critical):", err);
     }
 
-    // Fetch Smart Wallet Holders Data
+    // Fetch Smart Wallet Holders Data via Vercel API Function
     smartWalletData.value = [];
     isSmartWalletLoading.value = true;
     try {
-      if (smartWalletAddress && smartWalletAddress.length > 0) {
-        const uniqueAddresses = [
-          ...new Set(
-            smartWalletAddress.map((w) => w.address).filter(Boolean),
-          ),
-        ];
-        if (uniqueAddresses.length > 0) {
-          const CHUNK_SIZE = 50;
-          const chunks = [];
-          for (let i = 0; i < uniqueAddresses.length; i += CHUNK_SIZE) {
-            chunks.push(uniqueAddresses.slice(i, i + CHUNK_SIZE).join(","));
-          }
-          const results = await Promise.all(
-            chunks.map(async (chunk) => {
-              try {
-                const res = await fetch(
-                  `https://datapi.jup.ag/v1/holders/${address}?addresses=${chunk}`,
-                );
-                if (res.ok) {
-                  const json = await res.json();
-                  return json.holders || [];
-                }
-              } catch (err) {
-                console.log("Smart Wallet Holders chunk fetch error:", err);
-              }
-              return [];
-            }),
-          );
-          smartWalletData.value = results.flat();
-        }
-      }
+      const { wallets, holders } = await getSmartWallets(address);
+      smartWalletList.value = wallets || [];
+      smartWalletData.value = holders || [];
     } catch (err) {
-      console.log("Smart Wallet Holders fetch (non-critical):", err);
+      console.log("Smart Wallet fetch error (non-critical):", err);
     } finally {
       isSmartWalletLoading.value = false;
     }

@@ -1,14 +1,29 @@
-import metvaldData from "../../smartwallet/data.json";
-import meteoraidnData from "../../smartwallet/meteoraidn.json";
+let cachedWalletsList = null;
 
-const formattedMetvald = metvaldData.map((item) => ({
-    ...item,
-    source: "metvald",
-}));
+export async function getSmartWallets(tokenAddress = "") {
+  try {
+    const url = tokenAddress
+      ? `/api/smartwallet?token=${encodeURIComponent(tokenAddress)}`
+      : "/api/smartwallet";
 
-const formattedMeteoraidn = meteoraidnData.map((item) => ({
-    ...item,
-    source: "meteoraidn-discord",
-}));
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`API status: ${res.status}`);
+    }
 
-export default [...formattedMetvald, ...formattedMeteoraidn];
+    const json = await res.json();
+    if (json && json.success) {
+      const wallets = json.wallets || json.data || [];
+      const holders = json.holders || [];
+      cachedWalletsList = wallets;
+      return { wallets, holders };
+    }
+
+    throw new Error(json?.error || "Invalid response format");
+  } catch (err) {
+    console.error("Error fetching smart wallets from Vercel API:", err);
+    return { wallets: cachedWalletsList || [], holders: [] };
+  }
+}
+
+export default getSmartWallets;
