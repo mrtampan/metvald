@@ -18,7 +18,6 @@ Metvald is a comprehensive web application for Solana token analytics and Meteor
 - **Jupiter Datapi**: Solana asset metadata, holder counts, organic scoring, and audit metrics.
 - **GeckoTerminal & GMGN.ai**: Embedded trading chart widgets.
 
-
 ## 🛠️ Tech Stack
 
 - **Framework**: Vue 3 (Composition API) + Vite 8
@@ -37,10 +36,8 @@ Metvald is a comprehensive web application for Solana token analytics and Meteor
 2. **Run local dev server**:
 
    ```sh
-   npm run dev
+   vercel dev
    ```
-
-   _(Or `vercel dev` for Vercel local environment)_
 
 3. **Build for production**:
 
