@@ -83,5 +83,15 @@
         "name": "TraderPow",
         "category": "neutral",
         "address": "7eNRALuXYUJkUWTvRj5tcB7tcT43kmT5SNdkfy9fKTto"
+    },
+    {
+        "name": "Rodotfun",
+        "category": "diamond-hand",
+        "address": "DyXg3Xp6BoMq5K6Nmdb7hEzPMpkRWH2aXHHZhUgN1gd6"
+    },
+    {
+        "name": "DegenCapicalLLC",
+        "category": "neutral",
+        "address": "4CRX74nxAdmFY4Eh1WhTrmYqHoxwxGzwXfgzTWvhUfFn"
     }
 ]
