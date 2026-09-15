@@ -401,9 +401,18 @@ const fetchScreeningData = async () => {
 
     const data = await response.json();
 
+    let riskLevel = "good";
+
+    if (data.risks.length > 0) {
+      data.risks.forEach((risk) => {
+        riskLevel = risk.level;
+      });
+    }
+
     rugcheckData.value = {
       score: data.score_normalised || 0,
       risk: data.risks || [],
+      riskLevel: riskLevel,
     };
 
     tokenMeta.value = data.tokenMeta || {
@@ -723,51 +732,25 @@ const fetchScreeningData = async () => {
   }
 };
 
-const getRiskLevel = (score) => {
-  if (score == 1)
+const getRiskLevel = (level) => {
+  if (level == "good")
     return {
       level: "GOOD",
       color: "bg-green-100 text-green-800 border-green-300",
     };
-  if (score > 10)
+  if (level == "warn")
     return {
       level: "WARN",
-      color: "bg-orange-100 text-orange-800 border-orange-300",
-    };
-  if (score > 50)
-    return {
-      level: "RISKY",
       color: "bg-yellow-100 text-yellow-800 border-yellow-300",
     };
-  return {
-    level: "HIGH RISK",
-    color: "bg-red-100 text-red-800 border-red-300",
-  };
-};
-
-const getRiskInsiderLevel = (count) => {
-  if (count > 2000)
+  if (level == "danger")
     return {
-      level: "HIGH RISK",
-      color: "text-red-600",
-      cardColor: "bg-red-50 border-red-200",
-      badgeColor: "bg-red-100 text-red-800 border-red-300",
-      labelColor: "text-red-700",
-    };
-  if (count >= 700)
-    return {
-      level: "WARN",
-      color: "text-amber-600",
-      cardColor: "bg-amber-50 border-amber-200",
-      badgeColor: "bg-amber-100 text-amber-800 border-amber-300",
-      labelColor: "text-amber-700",
+      level: "DANGER",
+      color: "bg-red-100 text-red-800 border-red-300",
     };
   return {
-    level: "GOOD",
-    color: "text-emerald-600",
-    cardColor: "bg-emerald-50 border-emerald-200",
-    badgeColor: "bg-green-100 text-green-800 border-green-300",
-    labelColor: "text-emerald-700",
+    level: "Unknown",
+    color: "bg-blue-100 text-blue-800 border-blue-300",
   };
 };
 
@@ -996,7 +979,11 @@ watch(
                   type="button"
                   @click="copy(submittedAddress)"
                   class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition flex items-center justify-center shrink-0 cursor-pointer"
-                  :title="copied && copiedText === submittedAddress ? 'Copied!' : 'Copy Address'"
+                  :title="
+                    copied && copiedText === submittedAddress
+                      ? 'Copied!'
+                      : 'Copy Address'
+                  "
                 >
                   <svg
                     v-if="copied && copiedText === submittedAddress"
@@ -1930,7 +1917,11 @@ watch(
                       type="button"
                       @click="copy(wallet.address)"
                       class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
-                      :title="copied && copiedText === wallet.address ? 'Copied!' : 'Copy Address'"
+                      :title="
+                        copied && copiedText === wallet.address
+                          ? 'Copied!'
+                          : 'Copy Address'
+                      "
                     >
                       <svg
                         v-if="copied && copiedText === wallet.address"
@@ -2408,7 +2399,7 @@ watch(
           <div
             :class="[
               'p-3.5 rounded-xl border flex flex-col justify-between',
-              getRiskLevel(rugcheckData.score).color,
+              getRiskLevel(rugcheckData.riskLevel).color,
             ]"
           >
             <div>
@@ -2425,7 +2416,7 @@ watch(
                   <span class="text-xs text-gray-500 ml-1">/ 100</span>
                 </div>
                 <span class="text-base font-bold">
-                  {{ getRiskLevel(rugcheckData.score).level }}
+                  {{ getRiskLevel(rugcheckData.riskLevel).level }}
                 </span>
               </div>
             </div>
