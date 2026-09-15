@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useClipboard } from "@vueuse/core";
 import { useScreeningStore } from "../stores/screeningStore";
 import { getSmartWallets } from "../smart_wallet/index.js";
 
@@ -25,6 +26,7 @@ const meteoraPools = ref([]);
 const meteoraSortKey = ref("");
 const meteoraSortOrder = ref("desc");
 const submittedAddress = ref("");
+const { copy, copied, text: copiedText } = useClipboard({ copiedDuring: 2000 });
 const holdersData = ref([]);
 const totalHoldersCount = ref(0);
 const top10Percentage = ref(0);
@@ -986,9 +988,52 @@ watch(
                   </div>
                 </div>
               </div>
-              <p class="text-xs text-gray-400 font-mono mt-0.5 break-all">
-                {{ submittedAddress }}
-              </p>
+              <div class="flex items-center gap-1.5 mt-0.5">
+                <span class="text-xs text-gray-400 font-mono break-all">
+                  {{ submittedAddress }}
+                </span>
+                <button
+                  type="button"
+                  @click="copy(submittedAddress)"
+                  class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition flex items-center justify-center shrink-0 cursor-pointer"
+                  :title="copied && copiedText === submittedAddress ? 'Copied!' : 'Copy Address'"
+                >
+                  <svg
+                    v-if="copied && copiedText === submittedAddress"
+                    class="w-3.5 h-3.5 text-emerald-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M5 13l4 4L19 7"
+                    />
+                  </svg>
+                  <svg
+                    v-else
+                    class="w-3.5 h-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 012-2v-8a2 2 0 01-2-2h-8a2 2 0 01-2 2v8a2 2 0 012 2z"
+                    />
+                  </svg>
+                </button>
+                <span
+                  v-if="copied && copiedText === submittedAddress"
+                  class="text-[10px] text-emerald-600 font-medium select-none"
+                >
+                  Copied!
+                </span>
+              </div>
             </div>
           </div>
 
@@ -1880,6 +1925,47 @@ watch(
                       {{ wallet.address.slice(0, 4) }}...{{
                         wallet.address.slice(-4)
                       }}
+                    </span>
+                    <button
+                      type="button"
+                      @click="copy(wallet.address)"
+                      class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
+                      :title="copied && copiedText === wallet.address ? 'Copied!' : 'Copy Address'"
+                    >
+                      <svg
+                        v-if="copied && copiedText === wallet.address"
+                        class="w-3.5 h-3.5 text-emerald-600"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M5 13l4 4L19 7"
+                        />
+                      </svg>
+                      <svg
+                        v-else
+                        class="w-3.5 h-3.5"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                          stroke-width="2"
+                          d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 012-2v-8a2 2 0 01-2-2h-8a2 2 0 01-2 2v8a2 2 0 012 2z"
+                        />
+                      </svg>
+                    </button>
+                    <span
+                      v-if="copied && copiedText === wallet.address"
+                      class="text-[10px] text-emerald-600 font-medium select-none"
+                    >
+                      Copied!
                     </span>
                   </div>
                 </td>
