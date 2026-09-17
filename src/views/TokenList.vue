@@ -391,100 +391,90 @@ const fetchTokenList = async () => {
   try {
     const filterConditions = [];
 
-    // Filter pencarian Token Address
-    if (searchToken.value && searchToken.value.trim()) {
-      const input = searchToken.value.trim();
-      if (input.includes("token_x=") || input.includes("token_y=")) {
-        filterConditions.push(input);
-      } else if (input.includes("&&")) {
-        const parts = input.split("&&").map((p) => p.trim());
-        if (parts.length === 2) {
-          filterConditions.push(`token_x=${parts[0]}&&token_y=${parts[1]}`);
-        } else {
-          filterConditions.push(input);
-        }
-      } else if (input.includes(",")) {
-        const parts = input.split(",").map((p) => p.trim());
-        if (parts.length === 2) {
-          filterConditions.push(`token_x=${parts[0]}&&token_y=${parts[1]}`);
-        } else {
-          filterConditions.push(`token_x=${input}||token_y=${input}`);
-        }
-      } else {
-        filterConditions.push(`token_x=${input}||token_y=${input}`);
+    const isSearching = !!(searchToken.value && searchToken.value.trim());
+
+    // Preset filter hanya diterapkan jika tidak sedang melakukan pencarian
+    if (!isSearching) {
+      if (filters.value.noCriticalWarnings) {
+        filterConditions.push("base_token_has_critical_warnings=false");
+        filterConditions.push("quote_token_has_critical_warnings=false");
+      }
+
+      if (filters.value.noHighSingleOwnership) {
+        filterConditions.push("base_token_has_high_single_ownership=false");
+      }
+
+      if (filters.value.newListing) {
+        filterConditions.push("base_token_is_new_listing=false");
+      }
+
+      if (filters.value.noHighSupplyConcentration) {
+        filterConditions.push("base_token_has_high_supply_concentration=false");
       }
     }
 
-    if (filters.value.noCriticalWarnings) {
-      filterConditions.push("base_token_has_critical_warnings=false");
-      filterConditions.push("quote_token_has_critical_warnings=false");
-    }
-
-    if (filters.value.noHighSingleOwnership) {
-      filterConditions.push("base_token_has_high_single_ownership=false");
-    }
-
-    if (filters.value.newListing) {
-      filterConditions.push("base_token_is_new_listing=false");
-    }
-
-    if (filters.value.noHighSupplyConcentration) {
-      filterConditions.push("base_token_has_high_supply_concentration=false");
-    }
-
+    // Tetap batasi hanya pool bertipe dlmm
     filterConditions.push("pool_type=dlmm");
 
-    if (filters.value.minMarketCap > 0) {
-      filterConditions.push(
-        `base_token_market_cap>=${filters.value.minMarketCap}`,
-      );
-    }
+    if (!isSearching) {
+      if (filters.value.minMarketCap > 0) {
+        filterConditions.push(
+          `base_token_market_cap>=${filters.value.minMarketCap}`,
+        );
+      }
 
-    if (filters.value.maxTokenAgeHours > 0) {
-      const maxCreatedAt =
-        Date.now() - filters.value.maxTokenAgeHours * 3600 * 1000;
-      filterConditions.push(`base_token_created_at<=${maxCreatedAt}`);
-    }
+      if (filters.value.maxTokenAgeHours > 0) {
+        const maxCreatedAt =
+          Date.now() - filters.value.maxTokenAgeHours * 3600 * 1000;
+        filterConditions.push(`base_token_created_at<=${maxCreatedAt}`);
+      }
 
-    if (filters.value.minHolders > 0) {
-      filterConditions.push(`base_token_holders>=${filters.value.minHolders}`);
-    }
+      if (filters.value.minHolders > 0) {
+        filterConditions.push(`base_token_holders>=${filters.value.minHolders}`);
+      }
 
-    if (filters.value.minVolume > 0) {
-      filterConditions.push(`volume>=${filters.value.minVolume}`);
-    }
+      if (filters.value.minVolume > 0) {
+        filterConditions.push(`volume>=${filters.value.minVolume}`);
+      }
 
-    if (filters.value.minFeePct > 0) {
-      filterConditions.push(`fee_pct>=${filters.value.minFeePct}`);
-    }
+      if (filters.value.minFeePct > 0) {
+        filterConditions.push(`fee_pct>=${filters.value.minFeePct}`);
+      }
 
-    if (filters.value.minActiveTvl > 0) {
-      filterConditions.push(`active_tvl>=${filters.value.minActiveTvl}`);
-    }
+      if (filters.value.minActiveTvl > 0) {
+        filterConditions.push(`active_tvl>=${filters.value.minActiveTvl}`);
+      }
 
-    if (filters.value.minOrganicScore > 0) {
-      filterConditions.push(
-        `base_token_organic_score>=${filters.value.minOrganicScore}`,
-      );
-      filterConditions.push(
-        `quote_token_organic_score>=${filters.value.minOrganicScore}`,
-      );
-    }
+      if (filters.value.minOrganicScore > 0) {
+        filterConditions.push(
+          `base_token_organic_score>=${filters.value.minOrganicScore}`,
+        );
+        filterConditions.push(
+          `quote_token_organic_score>=${filters.value.minOrganicScore}`,
+        );
+      }
 
-    if (filters.value.minTvl > 0) {
-      filterConditions.push(`tvl>=${filters.value.minTvl}`);
-    }
+      if (filters.value.minTvl > 0) {
+        filterConditions.push(`tvl>=${filters.value.minTvl}`);
+      }
 
-    if (filters.value.minFeeActiveTvlRatio) {
-      filterConditions.push(
-        `fee_active_tvl_ratio>=${filters.value.minFeeActiveTvlRatio}`,
-      );
+      if (filters.value.minFeeActiveTvlRatio) {
+        filterConditions.push(
+          `fee_active_tvl_ratio>=${filters.value.minFeeActiveTvlRatio}`,
+        );
+      }
     }
 
     const filterByQuery = filterConditions.join("&&");
-    const categoryParam =
-      searchToken.value && searchToken.value.trim() ? "" : "&category=top";
-    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h${categoryParam}&filter_by=${encodeURIComponent(filterByQuery)}`;
+    const filterByParam =
+      filterConditions.length > 0
+        ? `&filter_by=${encodeURIComponent(filterByQuery)}`
+        : "";
+    const categoryParam = isSearching ? "" : "&category=top";
+    const queryParam = isSearching
+      ? `&query=${encodeURIComponent(searchToken.value.trim())}`
+      : "";
+    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h${categoryParam}${queryParam}${filterByParam}`;
 
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
