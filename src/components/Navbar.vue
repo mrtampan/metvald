@@ -20,9 +20,6 @@
             to="/dexscreener-list"
             class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium flex items-center gap-1.5"
           >
-            <span
-              class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"
-            ></span>
             Dexscreener List
           </RouterLink>
 
@@ -33,20 +30,10 @@
               class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium flex items-center gap-1 cursor-pointer focus:outline-none"
             >
               <span>About</span>
-              <svg
+              <ChevronDown
                 class="w-4 h-4 transition-transform duration-200"
                 :class="{ 'rotate-180': isAboutOpen }"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M19 9l-7 7-7-7"
-                />
-              </svg>
+              />
             </button>
 
             <!-- Dropdown Menu -->
@@ -72,7 +59,11 @@
                   <div
                     class="w-8 h-8 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 flex items-center justify-center text-gray-700 group-hover/item:text-blue-600 transition duration-150"
                   >
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
                       />
@@ -82,19 +73,9 @@
                     <span class="font-medium">X (Twitter)</span>
                     <span class="text-xs text-gray-400">@achmadrivaldi16</span>
                   </div>
-                  <svg
+                  <ExternalLink
                     class="w-3.5 h-3.5 ml-auto text-gray-400 group-hover/item:text-blue-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
+                  />
                 </a>
 
                 <a
@@ -107,7 +88,11 @@
                   <div
                     class="w-8 h-8 rounded-lg bg-gray-100 group-hover/item:bg-blue-100 flex items-center justify-center text-gray-700 group-hover/item:text-blue-600 transition duration-150"
                   >
-                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      class="w-4 h-4"
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         fill-rule="evenodd"
                         clip-rule="evenodd"
@@ -119,19 +104,9 @@
                     <span class="font-medium">GitHub</span>
                     <span class="text-xs text-gray-400">mrtampan/metvald</span>
                   </div>
-                  <svg
+                  <ExternalLink
                     class="w-3.5 h-3.5 ml-auto text-gray-400 group-hover/item:text-blue-500"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      stroke-linecap="round"
-                      stroke-linejoin="round"
-                      stroke-width="2"
-                      d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                    />
-                  </svg>
+                  />
                 </a>
               </div>
             </transition>
@@ -144,34 +119,8 @@
             @click="isOpen = !isOpen"
             class="text-gray-700 hover:text-blue-600 focus:outline-none focus:text-blue-600"
           >
-            <svg
-              v-if="!isOpen"
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 6h16M4 12h16M4 18h16"
-              />
-            </svg>
-            <svg
-              v-else
-              class="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <Menu v-if="!isOpen" class="w-6 h-6" />
+            <X v-else class="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -199,7 +148,9 @@
 
         <!-- Mobile About Section -->
         <div class="pt-2 mt-2 border-t border-gray-100">
-          <div class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+          <div
+            class="px-2 py-1 text-xs font-semibold text-gray-400 uppercase tracking-wider"
+          >
             About
           </div>
           <a
@@ -208,7 +159,11 @@
             rel="noopener noreferrer"
             class="flex items-center gap-2 px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
           >
-            <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              class="w-4 h-4 text-gray-600"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"
               />
@@ -221,7 +176,11 @@
             rel="noopener noreferrer"
             class="flex items-center gap-2 px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
           >
-            <svg class="w-4 h-4 text-gray-600" fill="currentColor" viewBox="0 0 24 24">
+            <svg
+              class="w-4 h-4 text-gray-600"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
               <path
                 fill-rule="evenodd"
                 clip-rule="evenodd"
@@ -239,6 +198,7 @@
 <script setup>
 import { ref } from "vue";
 import { onClickOutside } from "@vueuse/core";
+import { ChevronDown, ExternalLink, Menu, X } from "@lucide/vue";
 
 const isOpen = ref(false);
 const isAboutOpen = ref(false);

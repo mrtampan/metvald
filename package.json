@@ -9,6 +9,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@lucide/vue": "^1.47.0",
     "@vueuse/core": "^14.4.0",
     "pinia": "^4.0.3",
     "sweetalert2": "^11.26.25",

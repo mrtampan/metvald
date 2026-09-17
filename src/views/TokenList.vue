@@ -3,6 +3,23 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { watchDebounced } from "@vueuse/core";
 import { storeToRefs } from "pinia";
+import {
+  Filter,
+  RefreshCw,
+  Check,
+  X,
+  RotateCcw,
+  Save,
+  Clock,
+  Trash2,
+  Search,
+  ChevronUp,
+  ChevronDown,
+  ArrowUpDown,
+  Copy,
+  ChevronLeft,
+  ChevronRight,
+} from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
 
 const router = useRouter();
@@ -548,19 +565,7 @@ onMounted(() => {
             @click="isFilterModalOpen = true"
             class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-              />
-            </svg>
+            <Filter class="w-4 h-4" />
             <span>Filter</span>
             <span
               class="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-lg"
@@ -574,19 +579,7 @@ onMounted(() => {
             :disabled="isLoading"
             class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
           >
-            <svg
-              :class="['w-4 h-4', isLoading ? 'animate-spin' : '']"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
+            <RefreshCw :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" />
             Refresh Data
           </button>
         </div>
@@ -598,19 +591,7 @@ onMounted(() => {
         class="bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-semibold px-4 py-3 rounded-2xl flex items-center justify-between transition"
       >
         <div class="flex items-center gap-2">
-          <svg
-            class="w-4 h-4 text-emerald-600"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
+          <Check class="w-4 h-4 text-emerald-600" />
           <span>{{ presetSuccessMessage }}</span>
         </div>
         <button
@@ -636,19 +617,7 @@ onMounted(() => {
           >
             <div class="flex items-center gap-3">
               <div class="p-2.5 bg-blue-50 text-blue-600 rounded-2xl">
-                <svg
-                  class="w-5 h-5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
-                  />
-                </svg>
+                <Filter class="w-5 h-5" />
               </div>
               <div>
                 <h2 class="text-lg font-bold text-gray-900">Filter Settings</h2>
@@ -663,19 +632,7 @@ onMounted(() => {
               @click="isFilterModalOpen = false"
               class="text-gray-400 hover:text-gray-600 hover:bg-gray-200/60 p-2 rounded-xl transition"
             >
-              <svg
-                class="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X class="w-5 h-5" />
             </button>
           </div>
 
@@ -958,19 +915,7 @@ onMounted(() => {
                 @click="updateCurrentPreset"
                 class="bg-purple-600 hover:bg-purple-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
               >
-                <svg
-                  class="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-                  />
-                </svg>
+                <RotateCcw class="w-3.5 h-3.5" />
                 Update This Preset
               </button>
 
@@ -979,19 +924,7 @@ onMounted(() => {
                 @click="isModalOpen = true"
                 class="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow-xs"
               >
-                <svg
-                  class="w-3.5 h-3.5"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"
-                  />
-                </svg>
+                <Save class="w-3.5 h-3.5" />
                 Save New Preset
               </button>
 
@@ -1014,19 +947,7 @@ onMounted(() => {
       >
         <div class="flex items-center justify-between">
           <div class="flex items-center gap-2">
-            <svg
-              class="w-4 h-4 text-blue-600"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+            <Clock class="w-4 h-4 text-blue-600" />
             <span
               class="text-xs font-bold text-gray-700 uppercase tracking-wider"
             >
@@ -1043,19 +964,7 @@ onMounted(() => {
             class="text-[11px] text-gray-400 hover:text-red-500 transition cursor-pointer flex items-center gap-1 font-medium"
             title="Clear screening history"
           >
-            <svg
-              class="w-3.5 h-3.5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-              />
-            </svg>
+            <Trash2 class="w-3.5 h-3.5" />
             Clear History
           </button>
         </div>
@@ -1112,19 +1021,7 @@ onMounted(() => {
           <div
             class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-              />
-            </svg>
+            <Search class="w-4 h-4" />
           </div>
           <input
             v-model.trim="searchToken"
@@ -1138,19 +1035,7 @@ onMounted(() => {
             class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
             title="Clear search"
           >
-            <svg
-              class="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
+            <X class="w-4 h-4" />
           </button>
         </div>
 
@@ -1233,39 +1118,18 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Name Pair</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'name'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
-                      "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="sortKey === 'name' && sortOrder === 'asc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="sortKey === 'name' && sortOrder === 'desc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                    <ChevronUp
+                      v-if="sortKey === 'name' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="sortKey === 'name' && sortOrder === 'desc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
 
@@ -1281,44 +1145,23 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Position Created</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'positions_created'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                    <ChevronUp
+                      v-if="
+                        sortKey === 'positions_created' && sortOrder === 'asc'
                       "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="
-                          sortKey === 'positions_created' && sortOrder === 'asc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="
-                          sortKey === 'positions_created' &&
-                          sortOrder === 'desc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="
+                        sortKey === 'positions_created' &&
+                        sortOrder === 'desc'
+                      "
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
 
@@ -1334,45 +1177,24 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Volume / Active TVL</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'volume_active_tvl_ratio'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                    <ChevronUp
+                      v-if="
+                        sortKey === 'volume_active_tvl_ratio' &&
+                        sortOrder === 'asc'
                       "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="
-                          sortKey === 'volume_active_tvl_ratio' &&
-                          sortOrder === 'asc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="
-                          sortKey === 'volume_active_tvl_ratio' &&
-                          sortOrder === 'desc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="
+                        sortKey === 'volume_active_tvl_ratio' &&
+                        sortOrder === 'desc'
+                      "
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
 
@@ -1387,39 +1209,18 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Fees</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'fee'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
-                      "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="sortKey === 'fee' && sortOrder === 'asc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="sortKey === 'fee' && sortOrder === 'desc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                    <ChevronUp
+                      v-if="sortKey === 'fee' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="sortKey === 'fee' && sortOrder === 'desc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
 
@@ -1435,41 +1236,20 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>Token Age</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'created_at'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                    <ChevronUp
+                      v-if="sortKey === 'created_at' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="
+                        sortKey === 'created_at' && sortOrder === 'desc'
                       "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="sortKey === 'created_at' && sortOrder === 'asc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="
-                          sortKey === 'created_at' && sortOrder === 'desc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
                 <!-- MarketCap -->
@@ -1484,41 +1264,20 @@ onMounted(() => {
                 >
                   <div class="flex items-center gap-1.5">
                     <span>MarketCap</span>
-                    <svg
-                      class="w-3.5 h-3.5 transition-colors"
-                      :class="
-                        sortKey === 'market_cap'
-                          ? 'text-blue-600'
-                          : 'text-gray-400 opacity-60 group-hover:opacity-100'
+                    <ChevronUp
+                      v-if="sortKey === 'market_cap' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="
+                        sortKey === 'market_cap' && sortOrder === 'desc'
                       "
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        v-if="sortKey === 'market_cap' && sortOrder === 'asc'"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M5 15l7-7 7 7"
-                      />
-                      <path
-                        v-else-if="
-                          sortKey === 'market_cap' && sortOrder === 'desc'
-                        "
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2.5"
-                        d="M19 9l-7 7-7-7"
-                      />
-                      <path
-                        v-else
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"
-                      />
-                    </svg>
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
                   </div>
                 </th>
               </tr>
@@ -1583,19 +1342,7 @@ onMounted(() => {
                           class="hover:text-gray-600 transition"
                           title="Copy Address"
                         >
-                          <svg
-                            class="w-3 h-3"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                          >
-                            <path
-                              stroke-linecap="round"
-                              stroke-linejoin="round"
-                              stroke-width="2"
-                              d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 012-2v-8a2 2 0 01-2-2h-8a2 2 0 01-2 2v8a2 2 0 012 2z"
-                            />
-                          </svg>
+                          <Copy class="w-3 h-3" />
                         </button>
                         <span
                           v-if="
@@ -1779,19 +1526,7 @@ onMounted(() => {
               :disabled="currentPage === 1"
               class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
             >
-              <svg
-                class="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
+              <ChevronLeft class="w-3.5 h-3.5" />
               <span>Prev</span>
             </button>
 
@@ -1819,19 +1554,7 @@ onMounted(() => {
               class="px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-xs font-medium text-gray-700 hover:bg-gray-100 disabled:opacity-40 disabled:hover:bg-white transition flex items-center gap-1 cursor-pointer disabled:cursor-not-allowed"
             >
               <span>Next</span>
-              <svg
-                class="w-3.5 h-3.5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
-                  stroke-width="2"
-                  d="M9 5l7 7-7 7"
-                />
-              </svg>
+              <ChevronRight class="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
