@@ -60,7 +60,8 @@ const PRESET_ALL = {
 const filters = ref({ ...PRESET_DEFAULT });
 const activePresetKey = ref("default"); // 'default', 'all', atau ID custom preset
 const customPresets = ref([]);
-const searchToken = ref(""); // Single token search input
+const searchInput = ref(""); // Single token search input buffer
+const searchToken = ref(""); // Applied search query
 
 // Computed property untuk filter instan di client side berdasarkan kolom data token
 const filteredPools = computed(() => {
@@ -213,17 +214,6 @@ watch([itemsPerPage, searchToken, sortKey, sortOrder], () => {
   currentPage.value = 1;
 });
 
-// Watch searchToken menggunakan watchDebounced VueUse untuk auto refetch API saat input berubah
-watchDebounced(
-  searchToken,
-  (newVal) => {
-    const trimmed = (newVal || "").trim();
-    if (!trimmed || trimmed.length >= 30) {
-      fetchTokenList();
-    }
-  },
-  { debounce: 350, maxWait: 1000 },
-);
 
 // Watch filters secara debounced untuk auto fetch ketika input filter berubah secara real-time
 watchDebounced(
@@ -370,9 +360,26 @@ const getBaseToken = (pool) => {
   return pool.token_x || pool.token_y || {};
 };
 
+// Helper untuk aksi pencarian token manual
+const handleSearch = () => {
+  searchToken.value = searchInput.value.trim();
+  currentPage.value = 1;
+  fetchTokenList();
+};
+
+const handleClearInput = () => {
+  if (searchToken.value) {
+    clearTokenSearch();
+  } else {
+    searchInput.value = "";
+  }
+};
+
 // Helper untuk reset pencarian token
 const clearTokenSearch = () => {
+  searchInput.value = "";
   searchToken.value = "";
+  currentPage.value = 1;
   fetchTokenList();
 };
 
@@ -1017,27 +1024,43 @@ onMounted(() => {
       <div
         class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3"
       >
-        <div class="relative w-full">
-          <div
-            class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400"
-          >
-            <Search class="w-4 h-4" />
+        <form
+          @submit.prevent="handleSearch"
+          class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full"
+        >
+          <div class="relative flex-1">
+            <div
+              class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400"
+            >
+              <Search class="w-4 h-4" />
+            </div>
+            <input
+              v-model="searchInput"
+              @keyup.enter="handleSearch"
+              type="text"
+              placeholder="Search by Token Address, Symbol, or Pair (e.g., JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN)..."
+              class="w-full pl-10 pr-9 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50/50 font-mono transition"
+            />
+            <button
+              v-if="searchInput"
+              type="button"
+              @click="handleClearInput"
+              class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
+              title="Clear search"
+            >
+              <X class="w-4 h-4" />
+            </button>
           </div>
-          <input
-            v-model.trim="searchToken"
-            type="text"
-            placeholder="Search by Token Address, Symbol, or Pair (e.g., JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN)..."
-            class="w-full pl-10 pr-9 py-2.5 text-xs border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-gray-50/50 font-mono transition"
-          />
+
           <button
-            v-if="searchToken"
-            @click="clearTokenSearch"
-            class="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-red-500 transition cursor-pointer"
-            title="Clear search"
+            type="submit"
+            :disabled="isLoading"
+            class="bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2.5 px-5 rounded-xl transition text-xs flex items-center justify-center gap-2 shadow-xs whitespace-nowrap cursor-pointer disabled:cursor-not-allowed"
           >
-            <X class="w-4 h-4" />
+            <Search class="w-3.5 h-3.5" />
+            <span>{{ isLoading ? "Searching..." : "Search" }}</span>
           </button>
-        </div>
+        </form>
 
         <!-- Active Search Notice -->
         <div
@@ -1056,8 +1079,9 @@ onMounted(() => {
             </span>
           </div>
           <button
+            type="button"
             @click="clearTokenSearch"
-            class="text-blue-700 hover:text-red-600 underline text-xs font-semibold ml-2 transition"
+            class="text-blue-700 hover:text-red-600 underline text-xs font-semibold ml-2 transition cursor-pointer"
           >
             Clear Search
           </button>
