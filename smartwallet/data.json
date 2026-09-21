@@ -98,5 +98,15 @@
         "name": "Sadcrissy",
         "category": "neutral",
         "address": "2GtmuqG31LuuWQmKzeK72YjH5iALPkJycuQaEQGsFzLw"
+    },
+    {
+        "name": "Diaper",
+        "category": "paper-hand",
+        "address": "BLvwUkZWoBmXM7zqUnjDGVFtyDo67WhCCyXj4itVENG5"
+    },
+    {
+        "name": "Unipcs",
+        "category": "diamond-hand",
+        "address": "2heJbC32Tpfcb3nbUb5ER61K11FGZVfVGtVnDm6LDogF"
     }
 ]
