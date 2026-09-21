@@ -19,6 +19,8 @@ import {
   Copy,
   ChevronLeft,
   ChevronRight,
+  SlidersHorizontal,
+  Bookmark,
 } from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
 
@@ -31,8 +33,11 @@ const isLoading = ref(false);
 const errorMessage = ref("");
 
 // Presets Standard
+const TIMEFRAME_OPTIONS = ["5m", "30m", "1h", "2h", "4h", "12h", "24h"];
+
 const PRESET_DEFAULT = {
   name: "Default Filter",
+  timeframe: "2h",
   minMarketCap: 250000,
   maxTokenAgeHours: 5,
   minHolders: 1000,
@@ -44,8 +49,23 @@ const PRESET_DEFAULT = {
   minFeePct: 1,
 };
 
+const PRESET_HIGH_VOLUME = {
+  name: "High Volume Token",
+  timeframe: "5m",
+  minMarketCap: 100000,
+  maxTokenAgeHours: 0,
+  minHolders: 500,
+  minVolume: 50000,
+  minActiveTvl: 30000,
+  minOrganicScore: 60,
+  noHighSingleOwnership: true,
+  noCriticalWarnings: true,
+  minFeePct: 1,
+};
+
 const PRESET_ALL = {
   name: "Show All",
+  timeframe: "2h",
   minMarketCap: 0,
   maxTokenAgeHours: 0,
   minHolders: 0,
@@ -58,7 +78,7 @@ const PRESET_ALL = {
 };
 
 const filters = ref({ ...PRESET_DEFAULT });
-const activePresetKey = ref("default"); // 'default', 'all', atau ID custom preset
+const activePresetKey = ref("default"); // 'default', 'high_volume', 'all', atau ID custom preset
 const customPresets = ref([]);
 const searchInput = ref(""); // Single token search input buffer
 const searchToken = ref(""); // Applied search query
@@ -214,11 +234,17 @@ watch([itemsPerPage, searchToken, sortKey, sortOrder], () => {
   currentPage.value = 1;
 });
 
+// Flag untuk mencegah double-fetch saat preset diaplikasikan secara instan
+let isApplyingPreset = false;
 
 // Watch filters secara debounced untuk auto fetch ketika input filter berubah secara real-time
 watchDebounced(
   filters,
   () => {
+    if (isApplyingPreset) {
+      isApplyingPreset = false;
+      return;
+    }
     fetchTokenList();
   },
   { debounce: 400, maxWait: 1200, deep: true },
@@ -234,6 +260,7 @@ const presetSuccessMessage = ref("");
 const isCurrentPresetCustom = computed(() => {
   return (
     activePresetKey.value !== "default" &&
+    activePresetKey.value !== "high_volume" &&
     activePresetKey.value !== "all" &&
     customPresets.value.some((p) => p.id === activePresetKey.value)
   );
@@ -241,7 +268,8 @@ const isCurrentPresetCustom = computed(() => {
 
 // Computed property untuk label preset aktif
 const activePresetName = computed(() => {
-  if (activePresetKey.value === "default") return "Default Filter";
+  if (activePresetKey.value === "default") return "Default Preset";
+  if (activePresetKey.value === "high_volume") return PRESET_HIGH_VOLUME.name;
   if (activePresetKey.value === "all") return "Show All";
   const custom = customPresets.value.find(
     (p) => p.id === activePresetKey.value,
@@ -332,15 +360,30 @@ const deleteCustomPreset = (id, event) => {
   }
 };
 
-// Terapkan preset
+// Terapkan preset secara langsung
 const applyPreset = (key, customPresetObj = null) => {
   activePresetKey.value = key;
+  currentPage.value = 1;
+
+  // Bersihkan pencarian aktif agar filter preset langsung berdampak
+  if (searchToken.value || searchInput.value) {
+    searchInput.value = "";
+    searchToken.value = "";
+  }
+
+  isApplyingPreset = true;
+
   if (key === "default") {
     filters.value = JSON.parse(JSON.stringify(PRESET_DEFAULT));
+  } else if (key === "high_volume") {
+    filters.value = JSON.parse(JSON.stringify(PRESET_HIGH_VOLUME));
   } else if (key === "all") {
     filters.value = JSON.parse(JSON.stringify(PRESET_ALL));
   } else if (customPresetObj) {
-    filters.value = JSON.parse(JSON.stringify(customPresetObj.filters));
+    filters.value = {
+      timeframe: "2h",
+      ...JSON.parse(JSON.stringify(customPresetObj.filters)),
+    };
   }
   fetchTokenList();
 };
@@ -430,7 +473,9 @@ const fetchTokenList = async () => {
       }
 
       if (filters.value.minHolders > 0) {
-        filterConditions.push(`base_token_holders>=${filters.value.minHolders}`);
+        filterConditions.push(
+          `base_token_holders>=${filters.value.minHolders}`,
+        );
       }
 
       if (filters.value.minVolume > 0) {
@@ -474,7 +519,8 @@ const fetchTokenList = async () => {
     const queryParam = isSearching
       ? `&query=${encodeURIComponent(searchToken.value.trim())}`
       : "";
-    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=2h${categoryParam}${queryParam}${filterByParam}`;
+    const selectedTimeframe = filters.value.timeframe || "2h";
+    const apiUrl = `https://pool-discovery-api.datapi.meteora.ag/pools?page_size=50&timeframe=${encodeURIComponent(selectedTimeframe)}${categoryParam}${queryParam}${filterByParam}`;
 
     const res = await fetch(apiUrl);
     if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -548,37 +594,141 @@ onMounted(() => {
     <div class="max-w-7xl mx-auto space-y-6">
       <!-- Header Banner -->
       <div
-        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-5 sm:p-6 space-y-4"
       >
-        <div>
-          <h1 class="text-2xl font-bold text-gray-900">Token List</h1>
-          <p class="text-gray-500 text-sm mt-1">
-            Meteora DLMM pool data matching market criteria filters.
-          </p>
+        <div
+          class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        >
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Token List</h1>
+            <p class="text-gray-500 text-sm mt-1">
+              Meteora DLMM pool data matching market criteria filters.
+            </p>
+          </div>
+
+          <div class="flex items-center gap-3 flex-wrap">
+            <button
+              @click="isFilterModalOpen = true"
+              class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm cursor-pointer"
+            >
+              <Filter class="w-4 h-4" />
+              <span>Filter</span>
+              <span
+                class="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-lg"
+              >
+                {{ activePresetName }}
+              </span>
+              <span
+                class="bg-blue-800/70 text-blue-100 text-xs font-bold px-2 py-0.5 rounded-lg border border-blue-400/30"
+                title="Active Timeframe"
+              >
+                {{ filters.timeframe || "2h" }}
+              </span>
+            </button>
+
+            <button
+              @click="fetchTokenList"
+              :disabled="isLoading"
+              class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw
+                :class="['w-4 h-4', isLoading ? 'animate-spin' : '']"
+              />
+              Refresh Data
+            </button>
+          </div>
         </div>
 
-        <div class="flex items-center gap-3">
-          <button
-            @click="isFilterModalOpen = true"
-            class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 shadow-sm"
+        <!-- Quick Presets Toolbar Langsung Terapkan Filter -->
+        <div
+          class="pt-3 border-t border-gray-100 flex flex-wrap items-center gap-2"
+        >
+          <div
+            class="flex items-center gap-1.5 text-xs font-bold text-gray-500 mr-1 select-none uppercase tracking-wider"
           >
-            <Filter class="w-4 h-4" />
-            <span>Filter</span>
-            <span
-              class="bg-white/20 text-white text-xs font-bold px-2.5 py-0.5 rounded-lg"
-            >
-              {{ activePresetName }}
-            </span>
+            <SlidersHorizontal class="w-3.5 h-3.5 text-blue-600" />
+            <span>Preset:</span>
+          </div>
+
+          <!-- Default Preset Button -->
+          <button
+            type="button"
+            @click="applyPreset('default')"
+            :disabled="isLoading"
+            title="Terapkan Default Preset langsung"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5 cursor-pointer disabled:opacity-50',
+              activePresetKey === 'default'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300',
+            ]"
+          >
+            <Check
+              v-if="activePresetKey === 'default'"
+              class="w-3.5 h-3.5 text-white"
+            />
+            <span>Default Preset</span>
           </button>
 
+          <!-- High Volume Token Preset Button -->
           <button
-            @click="fetchTokenList"
+            type="button"
+            @click="applyPreset('high_volume')"
             :disabled="isLoading"
-            class="bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold px-4 py-2 rounded-xl transition flex items-center gap-2 disabled:opacity-50"
+            title="Terapkan High Volume Token langsung"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5 cursor-pointer disabled:opacity-50',
+              activePresetKey === 'high_volume'
+                ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300',
+            ]"
           >
-            <RefreshCw :class="['w-4 h-4', isLoading ? 'animate-spin' : '']" />
-            Refresh Data
+            <Check
+              v-if="activePresetKey === 'high_volume'"
+              class="w-3.5 h-3.5 text-white"
+            />
+            <span>High Volume Token</span>
           </button>
+
+          <!-- Semua Preset dari LocalStorage -->
+          <button
+            v-for="preset in customPresets"
+            :key="preset.id"
+            type="button"
+            @click="applyPreset(preset.id, preset)"
+            :disabled="isLoading"
+            :title="`Terapkan preset ${preset.name} langsung`"
+            :class="[
+              'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border flex items-center gap-1.5 cursor-pointer disabled:opacity-50',
+              activePresetKey === preset.id
+                ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+                : 'bg-purple-50/70 text-purple-700 border-purple-200 hover:bg-purple-100/80 hover:border-purple-300',
+            ]"
+          >
+            <Check
+              v-if="activePresetKey === preset.id"
+              class="w-3.5 h-3.5 text-white"
+            />
+            <Bookmark v-else class="w-3.5 h-3.5 text-purple-500" />
+            <span>{{ preset.name }}</span>
+          </button>
+
+          <!-- Quick Timeframe Selector -->
+          <div class="ml-auto flex items-center gap-1.5 text-xs">
+            <span class="text-gray-500 font-semibold flex items-center gap-1">
+              <Clock class="w-3.5 h-3.5 text-blue-600" />
+              <span>TF:</span>
+            </span>
+            <select
+              v-model="filters.timeframe"
+              :disabled="isLoading"
+              class="bg-white border border-gray-200 text-gray-800 text-xs font-bold rounded-xl px-2.5 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer hover:border-gray-300 transition shadow-2xs disabled:opacity-50"
+            >
+              <option v-for="tf in TIMEFRAME_OPTIONS" :key="tf" :value="tf">
+                {{ tf }}
+              </option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -662,6 +812,19 @@ onMounted(() => {
                   Default Filter
                 </button>
 
+                <!-- Built-in Preset: High Volume Token -->
+                <button
+                  @click="applyPreset('high_volume')"
+                  :class="[
+                    'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition border',
+                    activePresetKey === 'high_volume'
+                      ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                      : 'bg-white text-gray-700 border-gray-200 hover:bg-gray-100',
+                  ]"
+                >
+                  High Volume Token
+                </button>
+
                 <!-- Built-in Preset: Show All -->
                 <button
                   @click="applyPreset('all')"
@@ -717,6 +880,32 @@ onMounted(() => {
               </h3>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Timeframe -->
+                <div>
+                  <label
+                    class="block text-xs font-semibold text-gray-600 mb-1 flex items-center justify-between"
+                  >
+                    <span>Timeframe</span>
+                    <span
+                      class="text-[10px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.5 rounded"
+                    >
+                      Active: {{ filters.timeframe || "2h" }}
+                    </span>
+                  </label>
+                  <select
+                    v-model="filters.timeframe"
+                    class="w-full px-3.5 py-2 text-sm border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white transition cursor-pointer font-medium text-gray-800"
+                  >
+                    <option
+                      v-for="tf in TIMEFRAME_OPTIONS"
+                      :key="tf"
+                      :value="tf"
+                    >
+                      {{ tf }}
+                    </option>
+                  </select>
+                </div>
+
                 <!-- Organic Score -->
                 <div>
                   <label class="block text-xs font-semibold text-gray-600 mb-1">
@@ -1167,8 +1356,7 @@ onMounted(() => {
                     />
                     <ChevronDown
                       v-else-if="
-                        sortKey === 'positions_created' &&
-                        sortOrder === 'desc'
+                        sortKey === 'positions_created' && sortOrder === 'desc'
                       "
                       class="w-3.5 h-3.5 text-blue-600"
                     />
