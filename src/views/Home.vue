@@ -68,32 +68,12 @@
       </section>
 
       <!-- Recent Screening History (If any) -->
-      <section v-if="screeningHistory && screeningHistory.length > 0" class="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 space-y-4">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-bold text-gray-800 flex items-center gap-2">
-            <span>🕒</span>
-            <span>Recent Screening History</span>
-          </h2>
-          <button 
-            @click="screeningStore.clearScreeningHistory()" 
-            class="text-xs text-gray-500 hover:text-red-600 transition"
-          >
-            Clear History
-          </button>
-        </div>
-        <div class="flex flex-wrap gap-2">
-          <button
-            v-for="item in screeningHistory"
-            :key="item.address"
-            @click="goToToken(item.address)"
-            class="flex items-center gap-2 bg-gray-50 hover:bg-blue-50 border border-gray-200 hover:border-blue-300 px-3 py-1.5 rounded-xl text-xs text-gray-700 hover:text-blue-700 transition"
-          >
-            <img :src="item.icon" alt="token logo" class="w-4 h-4 rounded-full object-cover" @error="handleImageError" />
-            <span class="font-medium">{{ item.name }}</span>
-            <span class="text-gray-400 font-mono text-[10px]">{{ item.address.slice(0, 4) }}...{{ item.address.slice(-4) }}</span>
-          </button>
-        </div>
-      </section>
+      <ScreeningHistory
+        :history="screeningHistory"
+        title="Recent Screening History"
+        @clear="screeningStore.clearScreeningHistory()"
+        @select="(item) => goToToken(item.address)"
+      />
 
       <!-- Tool Capabilities & Features Grid -->
       <section class="space-y-4">
@@ -199,6 +179,7 @@ import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useScreeningStore } from "../stores/screeningStore";
 import { storeToRefs } from "pinia";
+import ScreeningHistory from "./ScreeningHistory.vue";
 
 const router = useRouter();
 const screeningStore = useScreeningStore();
@@ -226,10 +207,6 @@ const goToToken = (address) => {
     path: "/screening",
     query: { token: address }
   });
-};
-
-const handleImageError = (e) => {
-  e.target.src = "https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png";
 };
 </script>
 

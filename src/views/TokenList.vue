@@ -23,6 +23,7 @@ import {
   Bookmark,
 } from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
+import ScreeningHistory from "./ScreeningHistory.vue";
 
 const router = useRouter();
 const screeningStore = useScreeningStore();
@@ -576,10 +577,10 @@ const clearScreeningHistory = () => {
   screeningStore.clearScreeningHistory();
 };
 
-const truncateAddress = (addr) => {
-  if (!addr) return "";
-  if (addr.length <= 10) return addr;
-  return `${addr.slice(0, 4)}...${addr.slice(-4)}`;
+const handleSelectScreeningHistory = (item) => {
+  if (item?.address) {
+    router.push({ path: "/screening", query: { token: item.address } });
+  }
 };
 
 onMounted(() => {
@@ -1127,77 +1128,11 @@ onMounted(() => {
       </div>
 
       <!-- History Screening (Di Atas Pencarian) -->
-      <div
-        v-if="screeningHistory.length > 0"
-        class="bg-white rounded-2xl shadow-sm border border-gray-200 p-4 space-y-3"
-      >
-        <div class="flex items-center justify-between">
-          <div class="flex items-center gap-2">
-            <Clock class="w-4 h-4 text-blue-600" />
-            <span
-              class="text-xs font-bold text-gray-700 uppercase tracking-wider"
-            >
-              Screening History
-            </span>
-            <span
-              class="bg-blue-50 text-blue-700 text-[10px] font-bold px-2 py-0.5 rounded-full"
-            >
-              {{ screeningHistory.length }}
-            </span>
-          </div>
-          <button
-            @click="clearScreeningHistory"
-            class="text-[11px] text-gray-400 hover:text-red-500 transition cursor-pointer flex items-center gap-1 font-medium"
-            title="Clear screening history"
-          >
-            <Trash2 class="w-3.5 h-3.5" />
-            Clear History
-          </button>
-        </div>
-
-        <!-- Horizontal Scroll Container Item History (Desain: Gambar, Address, Name Token) -->
-        <div
-          class="flex items-center gap-2.5 overflow-x-auto pb-1.5 scrollbar-thin"
-        >
-          <a
-            v-for="item in screeningHistory"
-            :key="item.address"
-            :href="`/screening?token=${item.address}`"
-            class="flex items-center gap-2.5 px-3 py-2 bg-gray-50 hover:bg-blue-50/80 border border-gray-200 hover:border-blue-300 rounded-xl transition flex-shrink-0 group shadow-2xs"
-            :title="`Screening ${item.name} (${item.address})`"
-          >
-            <!-- 1. Gambar -->
-            <img
-              :src="
-                item.icon ||
-                'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
-              "
-              :alt="item.name"
-              class="w-6 h-6 rounded-full object-cover bg-gray-200 ring-1 ring-black/5 flex-shrink-0"
-              @error="
-                $event.target.src =
-                  'https://raw.githubusercontent.com/solana-labs/token-list/main/assets/mainnet/So11111111111111111111111111111111111111112/logo.png'
-              "
-            />
-
-            <div class="flex flex-col text-left">
-              <!-- 2. Name Token -->
-              <span
-                class="text-xs font-bold text-gray-800 group-hover:text-blue-600 leading-tight truncate max-w-[110px]"
-              >
-                {{ item.name || "Unknown" }}
-              </span>
-
-              <!-- 3. Address Token -->
-              <span
-                class="text-[10px] font-mono text-gray-400 leading-tight truncate max-w-[110px]"
-              >
-                {{ truncateAddress(item.address) }}
-              </span>
-            </div>
-          </a>
-        </div>
-      </div>
+      <ScreeningHistory
+        :history="screeningHistory"
+        @clear="clearScreeningHistory"
+        @select="handleSelectScreeningHistory"
+      />
 
       <!-- Single Token Search Bar (Di Bawah Filter) -->
       <div
