@@ -22,6 +22,7 @@ import {
 } from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
 import { getSmartWallets } from "../smart_wallet/index.js";
+import Swal from "sweetalert2";
 
 const route = useRoute();
 const router = useRouter();
@@ -802,6 +803,26 @@ watch(
     fetchScreeningData();
   },
 );
+
+watch(
+  () => jupiterData.value?.organicScore,
+  (score) => {
+    if (
+      score !== null &&
+      score !== undefined &&
+      score !== "" &&
+      !isNaN(Number(score)) &&
+      Number(score) === 0
+    ) {
+      Swal.fire({
+        icon: "error",
+        title: "Danger",
+        text: "Do not trade or provide LP for this token",
+        confirmButtonColor: "#ef4444",
+      });
+    }
+  },
+);
 </script>
 
 <template>
@@ -1269,6 +1290,26 @@ watch(
             />
             Jupiter Data
           </h2>
+        </div>
+
+        <!-- Danger Warning Banner if organicScore == 0 -->
+        <div
+          v-if="
+            jupiterData.organicScore !== null &&
+            jupiterData.organicScore !== undefined &&
+            jupiterData.organicScore !== '' &&
+            !isNaN(Number(jupiterData.organicScore)) &&
+            Number(jupiterData.organicScore) === 0
+          "
+          class="flex items-center gap-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-red-800"
+        >
+          <AlertTriangle class="w-5 h-5 text-red-600 shrink-0" />
+          <div>
+            <h4 class="font-bold text-sm">Danger</h4>
+            <p class="text-xs text-red-600 mt-0.5">
+              Do not trade or provide LP for this token
+            </p>
+          </div>
         </div>
 
         <!-- Metrics Grid -->
