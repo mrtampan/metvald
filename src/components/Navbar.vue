@@ -23,6 +23,13 @@
             Dexscreener List
           </RouterLink>
 
+          <RouterLink
+            to="/fomofamily-list"
+            class="text-gray-700 hover:text-blue-600 transition duration-300 font-medium flex items-center gap-1.5"
+          >
+            Fomo Family
+          </RouterLink>
+
           <!-- About Submenu Dropdown -->
           <div ref="aboutDropdownRef" class="relative">
             <button
@@ -144,6 +151,12 @@
           class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
         >
           Dexscreener List
+        </RouterLink>
+        <RouterLink
+          to="/fomofamily-list"
+          class="block px-2 py-2 rounded-md text-gray-700 hover:text-blue-600 hover:bg-gray-100 transition duration-300"
+        >
+          Fomo Family
         </RouterLink>
 
         <!-- Mobile About Section -->
