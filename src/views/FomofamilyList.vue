@@ -20,6 +20,8 @@ import {
   AlertCircle,
   ExternalLink,
   Trash2,
+  Clock,
+  Users,
 } from "@lucide/vue";
 
 const router = useRouter();
@@ -40,9 +42,8 @@ const toastMessage = ref("");
 const showToast = ref(false);
 const copiedAddress = ref("");
 
-// State Search & Filter
+// State Search
 const searchQuery = ref("");
-const filterDirection = ref("all"); // 'all', 'gainers', 'losers'
 
 // State Sorting (default kosong agar urutan data 100% mengikuti urutan asli dari API Fomo Family)
 const sortKey = ref("");
@@ -159,7 +160,7 @@ const goToScreening = (address) => {
   router.push({ name: "screening", query: { token: address } });
 };
 
-// Format Nilai Mata Uang (MCap)
+// Format Nilai Mata Uang (MCap & Volume)
 const formatCurrency = (val) => {
   if (val === undefined || val === null || isNaN(val)) return "$0";
   const num = Number(val);
@@ -184,16 +185,82 @@ const formatPercent = (change24) => {
   })}%`;
 };
 
+// Parser Created At
+const parseCreatedAt = (val) => {
+  if (!val) return 0;
+  if (typeof val === "number") {
+    return val < 1e11 ? val * 1000 : val;
+  }
+  if (typeof val === "string") {
+    const num = Number(val);
+    if (!isNaN(num) && num > 0) {
+      return num < 1e11 ? num * 1000 : num;
+    }
+    const parsed = Date.parse(val);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  return 0;
+};
+
+// Format Umur Token (Relative Age)
+const formatAge = (createdAt) => {
+  if (!createdAt) return "-";
+  const timestamp = parseCreatedAt(createdAt);
+  if (!timestamp) {
+    return String(createdAt);
+  }
+  const diffMs = Date.now() - timestamp;
+  if (diffMs < 0) return "Baru saja";
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  if (diffMinutes < 60) return `${diffMinutes}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays < 30) return `${diffDays}d`;
+  const diffMonths = Math.floor(diffDays / 30);
+  return `${diffMonths}mo`;
+};
+
+// Format Tanggal Singkat
+const formatShortDate = (createdAt) => {
+  const timestamp = parseCreatedAt(createdAt);
+  if (!timestamp) return "";
+  try {
+    return new Date(timestamp).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "short",
+    });
+  } catch {
+    return "";
+  }
+};
+
+// Format Tanggal Lengkap untuk Tooltip
+const formatFullDate = (createdAt) => {
+  const timestamp = parseCreatedAt(createdAt);
+  if (!timestamp) return "";
+  try {
+    return new Date(timestamp).toLocaleString("id-ID", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return "";
+  }
+};
+
+// Format Holders
+const formatHolders = (val) => {
+  if (val === undefined || val === null || val === "" || isNaN(Number(val))) return "-";
+  return Number(val).toLocaleString("en-US");
+};
+
 // Computed Filtered Tokens
 const filteredTokens = computed(() => {
   let list = tokens.value;
-
-  // Filter Kenaikan (All / Gainers / Losers)
-  if (filterDirection.value === "gainers") {
-    list = list.filter((item) => Number(item.change24 || 0) >= 0);
-  } else if (filterDirection.value === "losers") {
-    list = list.filter((item) => Number(item.change24 || 0) < 0);
-  }
 
   // Filter Search Query
   if (searchQuery.value && searchQuery.value.trim()) {
@@ -232,6 +299,21 @@ const sortedTokens = computed(() => {
       case "change24":
         valA = Number(a.change24 || 0);
         valB = Number(b.change24 || 0);
+        break;
+
+      case "createdAt":
+        valA = parseCreatedAt(a.createdAt ?? a.token?.createdAt);
+        valB = parseCreatedAt(b.createdAt ?? b.token?.createdAt);
+        break;
+
+      case "holders":
+        valA = Number(a.holders ?? a.token?.holders ?? 0);
+        valB = Number(b.holders ?? b.token?.holders ?? 0);
+        break;
+
+      case "volume24":
+        valA = Number(a.volume24 ?? a.token?.volume24 ?? a.volume24h ?? 0);
+        valB = Number(b.volume24 ?? b.token?.volume24 ?? b.volume24h ?? 0);
         break;
 
       default:
@@ -290,7 +372,7 @@ const goToPage = (page) => {
   }
 };
 
-watch([itemsPerPage, searchQuery, filterDirection], () => {
+watch([itemsPerPage, searchQuery], () => {
   currentPage.value = 1;
 });
 
@@ -341,7 +423,7 @@ onMounted(() => {
               </h1>
             </div>
             <p class="text-gray-500 text-sm mt-1">
-              Daftar token trending dari Fomo Family API (nama token, logo, market cap, dan persentase kenaikan).
+              Daftar token trending dari Fomo Family API (nama token, logo, umur/created at, holders, volume 24h, market cap, dan persentase kenaikan).
             </p>
           </div>
 
@@ -436,58 +518,17 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Filter Arah Kenaikan (Gainers / Losers / All) -->
-        <div class="flex items-center gap-2 flex-wrap">
-          <div class="flex items-center bg-gray-100 p-1 rounded-xl border border-gray-200">
-            <button
-              @click="filterDirection = 'all'"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition',
-                filterDirection === 'all'
-                  ? 'bg-white text-gray-900 shadow-xs'
-                  : 'text-gray-600 hover:text-gray-900',
-              ]"
-            >
-              Semua ({{ tokens.length }})
-            </button>
-            <button
-              @click="filterDirection = 'gainers'"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1',
-                filterDirection === 'gainers'
-                  ? 'bg-green-600 text-white shadow-xs'
-                  : 'text-gray-600 hover:text-green-600',
-              ]"
-            >
-              <TrendingUp class="w-3 h-3" />
-              <span>Naik</span>
-            </button>
-            <button
-              @click="filterDirection = 'losers'"
-              :class="[
-                'px-3 py-1.5 rounded-lg text-xs font-semibold transition flex items-center gap-1',
-                filterDirection === 'losers'
-                  ? 'bg-red-600 text-white shadow-xs'
-                  : 'text-gray-600 hover:text-red-600',
-              ]"
-            >
-              <TrendingDown class="w-3 h-3" />
-              <span>Turun</span>
-            </button>
-          </div>
-
-          <!-- Items Per Page -->
-          <div class="flex items-center gap-1.5 text-xs text-gray-500">
-            <span class="hidden sm:inline">Per halaman:</span>
-            <select
-              v-model="itemsPerPage"
-              class="border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white text-xs font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none"
-            >
-              <option :value="10">10</option>
-              <option :value="25">25</option>
-              <option :value="50">50</option>
-            </select>
-          </div>
+        <!-- Items Per Page -->
+        <div class="flex items-center gap-1.5 text-xs text-gray-500">
+          <span class="hidden sm:inline">Per halaman:</span>
+          <select
+            v-model="itemsPerPage"
+            class="border border-gray-300 rounded-lg px-2.5 py-1.5 bg-white text-xs font-medium focus:ring-1 focus:ring-blue-500 focus:outline-none"
+          >
+            <option :value="10">10</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
         </div>
       </div>
 
@@ -560,6 +601,84 @@ onMounted(() => {
                     />
                     <ChevronDown
                       v-else-if="sortKey === 'name' && sortOrder === 'desc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
+                  </div>
+                </th>
+
+                <!-- Kolom Created At -->
+                <th
+                  @click="toggleSort('createdAt')"
+                  class="py-3.5 px-4 cursor-pointer hover:bg-gray-100/80 transition group text-right whitespace-nowrap"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50': sortKey === 'createdAt',
+                  }"
+                  title="Urutkan berdasarkan Created At"
+                >
+                  <div class="flex items-center justify-end gap-1.5">
+                    <span>Created At</span>
+                    <ChevronUp
+                      v-if="sortKey === 'createdAt' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="sortKey === 'createdAt' && sortOrder === 'desc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
+                  </div>
+                </th>
+
+                <!-- Kolom Holders -->
+                <th
+                  @click="toggleSort('holders')"
+                  class="py-3.5 px-4 cursor-pointer hover:bg-gray-100/80 transition group text-right whitespace-nowrap"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50': sortKey === 'holders',
+                  }"
+                  title="Urutkan berdasarkan Holders"
+                >
+                  <div class="flex items-center justify-end gap-1.5">
+                    <span>Holders</span>
+                    <ChevronUp
+                      v-if="sortKey === 'holders' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="sortKey === 'holders' && sortOrder === 'desc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ArrowUpDown
+                      v-else
+                      class="w-3.5 h-3.5 text-gray-400 opacity-60 group-hover:opacity-100"
+                    />
+                  </div>
+                </th>
+
+                <!-- Kolom Volume 24h -->
+                <th
+                  @click="toggleSort('volume24')"
+                  class="py-3.5 px-4 cursor-pointer hover:bg-gray-100/80 transition group text-right whitespace-nowrap"
+                  :class="{
+                    'text-blue-600 font-bold bg-blue-50/50': sortKey === 'volume24',
+                  }"
+                  title="Urutkan berdasarkan Volume 24 Jam"
+                >
+                  <div class="flex items-center justify-end gap-1.5">
+                    <span>Volume 24h</span>
+                    <ChevronUp
+                      v-if="sortKey === 'volume24' && sortOrder === 'asc'"
+                      class="w-3.5 h-3.5 text-blue-600"
+                    />
+                    <ChevronDown
+                      v-else-if="sortKey === 'volume24' && sortOrder === 'desc'"
                       class="w-3.5 h-3.5 text-blue-600"
                     />
                     <ArrowUpDown
@@ -709,6 +828,40 @@ onMounted(() => {
                       </div>
                     </div>
                   </div>
+                </td>
+
+                <!-- Created At -->
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div
+                    class="inline-flex flex-col items-end"
+                    :title="formatFullDate(item.createdAt ?? item.token?.createdAt)"
+                  >
+                    <span class="font-semibold text-gray-800 text-sm flex items-center gap-1.5">
+                      <Clock class="w-3.5 h-3.5 text-gray-400" />
+                      {{ formatAge(item.createdAt ?? item.token?.createdAt) }}
+                    </span>
+                    <span
+                      v-if="formatShortDate(item.createdAt ?? item.token?.createdAt)"
+                      class="text-[11px] text-gray-400 font-normal mt-0.5"
+                    >
+                      {{ formatShortDate(item.createdAt ?? item.token?.createdAt) }}
+                    </span>
+                  </div>
+                </td>
+
+                <!-- Holders -->
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1.5 font-semibold text-gray-800 text-sm">
+                    <Users class="w-3.5 h-3.5 text-gray-400" />
+                    <span>{{ formatHolders(item.holders ?? item.token?.holders) }}</span>
+                  </div>
+                </td>
+
+                <!-- Volume 24h -->
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <span class="font-bold text-gray-900 text-sm">
+                    {{ formatCurrency(item.volume24 ?? item.token?.volume24 ?? item.volume24h) }}
+                  </span>
                 </td>
 
                 <!-- Market Cap (MCap) -->
