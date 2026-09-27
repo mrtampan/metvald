@@ -410,84 +410,98 @@ const fetchScreeningData = async () => {
   submittedAddress.value = address;
 
   try {
-    const response = await fetch(
-      `https://api.rugcheck.xyz/v1/tokens/${address}/report`,
-    );
+    try {
+      const response = await fetch(
+        `https://api.rugcheck.xyz/v1/tokens/${address}/report`,
+      );
 
-    if (!response.ok) {
-      throw new Error("Token not found or invalid address");
-    }
+      let data = null;
 
-    const data = await response.json();
-
-    let riskLevel = "good";
-
-    if (data.risks.length > 0) {
-      data.risks.forEach((risk) => {
-        riskLevel = risk.level;
-      });
-    }
-
-    rugcheckData.value = {
-      score: data.score_normalised || 0,
-      risk: data.risks || [],
-      riskLevel: riskLevel,
-    };
-
-    tokenMeta.value = data.tokenMeta || {
-      name: "Unknown",
-      symbol: "Unknown",
-    };
-
-    riskDetails.value = {
-      freezeAuthority: data.freezeAuthority || "N/A",
-      rugged: data.rugged || false,
-      score: data.score || 0,
-    };
-
-    // Simple Holders Data Population
-    holdersData.value = (data.topHolders || []).map((item, idx) => ({
-      owner: item.owner || item.address,
-      uiAmount: item.uiAmount || item.amount || 0,
-      pct: item.pct || 0,
-      rank: idx + 1,
-      insider: Boolean(item.insider),
-    }));
-
-    totalHoldersCount.value = data.totalHolders;
-
-    if (holdersData.value.length > 0) {
-      const top10Sum = holdersData.value
-        .slice(0, 10)
-        .reduce((acc, h) => acc + (h.pct || 0), 0);
-      top10Percentage.value = Number(top10Sum.toFixed(2));
-    }
-
-    // Extract Insider Networks Data
-    let rawInsiderCount = Number(data.graphInsidersDetected) || 0;
-
-    const ownerCountsMap = {};
-    holdersData.value.forEach((h) => {
-      if (h.owner) {
-        ownerCountsMap[h.owner] = (ownerCountsMap[h.owner] || 0) + 1;
+      if (response.ok) {
+        data = await response.json();
+      } else {
+        // Fallback coba ke summary endpoint
+        const summaryRes = await fetch(
+          `https://api.rugcheck.xyz/v1/tokens/${address}/report/summary`,
+        );
+        if (summaryRes.ok) {
+          data = await summaryRes.json();
+        }
       }
-    });
 
-    const insiderHolders = holdersData.value.filter(
-      (h) =>
-        h.insider || (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
-    );
+      if (data) {
+        let riskLevel = "good";
 
-    const rawInsiderSupply = insiderHolders.reduce(
-      (acc, h) => acc + (h.pct || 0),
-      0,
-    );
+        if (data.risks && data.risks.length > 0) {
+          data.risks.forEach((risk) => {
+            riskLevel = risk.level;
+          });
+        }
 
-    insiderWalletsCount.value = Math.max(
-      rawInsiderCount,
-      insiderHolders.length,
-    );
-    insiderSupplyPct.value = Number(rawInsiderSupply.toFixed(2));
+        rugcheckData.value = {
+          score: data.score_normalised || 0,
+          risk: data.risks || [],
+          riskLevel: riskLevel,
+        };
+
+        tokenMeta.value = data.tokenMeta || {
+          name: "Unknown",
+          symbol: "Unknown",
+        };
+
+        riskDetails.value = {
+          freezeAuthority: data.freezeAuthority || "N/A",
+          rugged: data.rugged || false,
+          score: data.score || 0,
+        };
+
+        // Simple Holders Data Population
+        holdersData.value = (data.topHolders || []).map((item, idx) => ({
+          owner: item.owner || item.address,
+          uiAmount: item.uiAmount || item.amount || 0,
+          pct: item.pct || 0,
+          rank: idx + 1,
+          insider: Boolean(item.insider),
+        }));
+
+        totalHoldersCount.value = data.totalHolders;
+
+        if (holdersData.value.length > 0) {
+          const top10Sum = holdersData.value
+            .slice(0, 10)
+            .reduce((acc, h) => acc + (h.pct || 0), 0);
+          top10Percentage.value = Number(top10Sum.toFixed(2));
+        }
+
+        // Extract Insider Networks Data
+        let rawInsiderCount = Number(data.graphInsidersDetected) || 0;
+
+        const ownerCountsMap = {};
+        holdersData.value.forEach((h) => {
+          if (h.owner) {
+            ownerCountsMap[h.owner] = (ownerCountsMap[h.owner] || 0) + 1;
+          }
+        });
+
+        const insiderHolders = holdersData.value.filter(
+          (h) =>
+            h.insider || (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
+        );
+
+        const rawInsiderSupply = insiderHolders.reduce(
+          (acc, h) => acc + (h.pct || 0),
+          0,
+        );
+
+        insiderWalletsCount.value = Math.max(
+          rawInsiderCount,
+          insiderHolders.length,
+        );
+        insiderSupplyPct.value = Number(rawInsiderSupply.toFixed(2));
+      }
+    } catch (err) {
+      console.log("Rugcheck fetch (non-critical):", err);
+    }
 
     try {
       const dexResponse = await fetch(
@@ -718,34 +732,53 @@ const fetchScreeningData = async () => {
       feesData.value = null;
     }
 
+    // Fallback token metadata jika rugcheck tidak tersedia
+    if (!tokenMeta.value || tokenMeta.value.name === "Unknown") {
+      if (
+        dexscreenerData.value?.name &&
+        dexscreenerData.value.name !== "Unknown"
+      ) {
+        tokenMeta.value = {
+          name: dexscreenerData.value.name,
+          symbol: dexscreenerData.value.symbol,
+        };
+      } else if (jupiterData.value?.name) {
+        tokenMeta.value = {
+          name: jupiterData.value.name,
+          symbol: jupiterData.value.symbol,
+        };
+      }
+    }
+
     // Record screening history ke central Pinia store
     const tokenName =
       dexscreenerData.value?.name ||
       tokenMeta.value?.name ||
-      tokenMeta.value?.symbol ||
+      jupiterData.value?.name ||
       "Unknown";
-    const tokenIcon = dexscreenerData.value?.imageUrl || "";
+    const tokenIcon =
+      dexscreenerData.value?.imageUrl || jupiterData.value?.icon || "";
     screeningStore.recordScreeningHistory({
       address,
       name: tokenName,
       icon: tokenIcon,
     });
+
+    // Validasi jika token benar-benar tidak ditemukan di semua API
+    if (
+      !dexscreenerData.value &&
+      !meteoraData.value &&
+      !jupiterData.value &&
+      !rugcheckData.value
+    ) {
+      message.value =
+        "Data token tidak ditemukan di jaringan Solana atau alamat tidak valid.";
+    }
   } catch (error) {
-    message.value = `Error: ${error.message}`;
-    rugcheckData.value = null;
-    tokenMeta.value = null;
-    riskDetails.value = null;
-    dexscreenerData.value = null;
-    meteoraData.value = null;
-    mobulaData.value = null;
-    jupiterData.value = null;
-    narrativeData.value = null;
-    meteoraPools.value = [];
-    holdersData.value = [];
-    totalHoldersCount.value = 0;
-    top10Percentage.value = 0;
-    smartWalletData.value = [];
-    submittedAddress.value = "";
+    console.error("Critical error in fetchScreeningData:", error);
+    if (!dexscreenerData.value && !meteoraData.value && !jupiterData.value) {
+      message.value = `Gagal memuat data token: ${error.message}`;
+    }
   } finally {
     isLoading.value = false;
   }
