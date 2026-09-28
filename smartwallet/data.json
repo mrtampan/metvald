@@ -85,7 +85,7 @@
         "address": "7eNRALuXYUJkUWTvRj5tcB7tcT43kmT5SNdkfy9fKTto"
     },
     {
-        "name": "Rodotfun",
+        "name": "IruleTrenches",
         "category": "diamond-hand",
         "address": "DyXg3Xp6BoMq5K6Nmdb7hEzPMpkRWH2aXHHZhUgN1gd6"
     },
@@ -108,5 +108,15 @@
         "name": "Unipcs",
         "category": "diamond-hand",
         "address": "2heJbC32Tpfcb3nbUb5ER61K11FGZVfVGtVnDm6LDogF"
+    },
+    {
+        "name": "Rodotfun",
+        "category": "diamond-hand",
+        "address": "AxtZoNYhAxvpv416hW7yzpTdcJeY45t8JyGUYMJXL9G"
+    },
+    {
+        "name": "Binkiee",
+        "category": "neutral",
+        "address": "6zMVSeukMUMKu5tDsECh4QMqrCRZqTbTvuawztFfwNti"
     }
 ]
