@@ -198,6 +198,14 @@ const externalRedirectLinks = computed(() => {
       bgClass:
         "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200",
     },
+    {
+      id: "clobr",
+      name: "Clobr",
+      url: `https://clobr.io/token/${addr}`,
+      icon: "https://www.google.com/s2/favicons?domain=clobr.io&sz=64",
+      bgClass:
+        "bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200",
+    },
   ];
 });
 
