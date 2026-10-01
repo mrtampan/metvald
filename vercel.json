@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/clobr-api/:path*",
+      "destination": "https://clobr.io/:path*"
+    },
+    {
       "source": "/((?!api/|@vite/|@id/|@fs/|node_modules/|.*\\..*).*)",
       "destination": "/index.html"
     }

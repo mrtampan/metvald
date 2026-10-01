@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   XCircle,
   Layers,
+  TrendingUp,
 } from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
 import { getSmartWallets } from "../smart_wallet/index.js";
@@ -37,6 +38,7 @@ const riskDetails = ref(null);
 const dexscreenerData = ref(null);
 const meteoraData = ref(null);
 const mobulaData = ref(null);
+const clobrData = ref(null);
 const jupiterData = ref(null);
 const narrativeData = ref(null);
 const solPriceUsd = ref(0);
@@ -256,6 +258,88 @@ const tokenSocials = computed(() => {
   return [];
 });
 
+const clobrTrendingItems = computed(() => {
+  if (
+    !clobrData.value?.trendingSources ||
+    !Array.isArray(clobrData.value.trendingSources)
+  ) {
+    return [];
+  }
+  const sources = clobrData.value.trendingSources;
+  const sourceConfig = {
+    jupiter: {
+      name: "Jupiter",
+      rank: clobrData.value.trendingRankJupiter,
+      icon: "https://www.google.com/s2/favicons?domain=jup.ag&sz=64",
+      color: "bg-orange-50 border-orange-200 text-orange-700",
+      labelColor: "text-orange-600",
+    },
+    geckoterminal: {
+      name: "GeckoTerminal",
+      rank: clobrData.value.trendingRankGt,
+      icon: "https://www.google.com/s2/favicons?domain=geckoterminal.com&sz=64",
+      color: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      labelColor: "text-emerald-600",
+    },
+    solanatracker: {
+      name: "Solana Tracker",
+      rank: clobrData.value.trendingRankSt,
+      icon: "https://www.google.com/s2/favicons?domain=solanatracker.io&sz=64",
+      color: "bg-indigo-50 border-indigo-200 text-indigo-700",
+      labelColor: "text-indigo-600",
+    },
+    pumpfun: {
+      name: "Pump.fun",
+      rank: clobrData.value.trendingRankPf,
+      icon: "https://www.google.com/s2/favicons?domain=pump.fun&sz=64",
+      color: "bg-cyan-50 border-cyan-200 text-cyan-700",
+      labelColor: "text-cyan-600",
+    },
+  };
+
+  return sources
+    .map((sourceKey) => {
+      const key = String(sourceKey).toLowerCase().trim();
+      const cfg = sourceConfig[key];
+      if (!cfg) return null;
+      return {
+        key,
+        name: cfg.name,
+        rank: cfg.rank,
+        icon: cfg.icon,
+        color: cfg.color,
+        labelColor: cfg.labelColor,
+      };
+    })
+    .filter(Boolean);
+});
+
+const getClobrScoreStyle = (score) => {
+  if (score === null || score === undefined || isNaN(score)) {
+    return {
+      card: "bg-gray-50 border-gray-200 text-gray-700",
+      label: "text-gray-500",
+    };
+  }
+  const s = Number(score);
+  if (s >= 60) {
+    return {
+      card: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      label: "text-emerald-600",
+    };
+  }
+  if (s >= 40) {
+    return {
+      card: "bg-amber-50 border-amber-200 text-amber-700",
+      label: "text-amber-600",
+    };
+  }
+  return {
+    card: "bg-red-50 border-red-200 text-red-700",
+    label: "text-red-600",
+  };
+};
+
 const formatCurrency = (val) => {
   if (val === undefined || val === null || isNaN(val)) return "N/A";
   return (
@@ -406,6 +490,7 @@ const fetchScreeningData = async () => {
   dexscreenerData.value = null;
   meteoraData.value = null;
   mobulaData.value = null;
+  clobrData.value = null;
   jupiterData.value = null;
   narrativeData.value = null;
   solPriceUsd.value = 0;
@@ -493,7 +578,8 @@ const fetchScreeningData = async () => {
 
         const insiderHolders = holdersData.value.filter(
           (h) =>
-            h.insider || (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
+            h.insider ||
+            (ownerCountsMap[h.owner] && ownerCountsMap[h.owner] > 1),
         );
 
         const rawInsiderSupply = insiderHolders.reduce(
@@ -653,6 +739,64 @@ const fetchScreeningData = async () => {
       console.log("Mobula fetch (non-critical):", err);
     }
 
+    // Fetch Clobr Data (Score & TokenInfo)
+    try {
+      const [scoreRes, tokenInfoRes] = await Promise.allSettled([
+        fetch(`/clobr-api/api/score?address=${address}`)
+          .catch(() => null)
+          .then(async (res) => {
+            if (res && res.ok) return res.json();
+            const fallback = await fetch(
+              `https://clobr.io/api/score?address=${address}`,
+            ).catch(() => null);
+            return fallback && fallback.ok ? fallback.json() : null;
+          }),
+        fetch(`/clobr-api/api/tokenInfo?address=${address}`)
+          .catch(() => null)
+          .then(async (res) => {
+            if (res && res.ok) return res.json();
+            const fallback = await fetch(
+              `https://clobr.io/api/tokenInfo?address=${address}`,
+            ).catch(() => null);
+            return fallback && fallback.ok ? fallback.json() : null;
+          }),
+      ]);
+
+      const scoreJson =
+        scoreRes.status === "fulfilled" ? scoreRes.value : null;
+      const tokenInfoRaw =
+        tokenInfoRes.status === "fulfilled" ? tokenInfoRes.value : null;
+      const tokenInfoJson = Array.isArray(tokenInfoRaw)
+        ? tokenInfoRaw[0]
+        : tokenInfoRaw;
+
+      let score = null;
+      if (scoreJson?.score !== null && scoreJson?.score !== undefined) {
+        score = Number(scoreJson.score);
+      } else if (tokenInfoJson?.score !== null && tokenInfoJson?.score !== undefined) {
+        score = Number(tokenInfoJson.score);
+      }
+
+      const trendingSources = tokenInfoJson?.trending_sources || [];
+      const trendingRankJupiter = tokenInfoJson?.trending_rank_jupiter ?? null;
+      const trendingRankGt = tokenInfoJson?.trending_rank_gt ?? null;
+      const trendingRankSt = tokenInfoJson?.trending_rank_st ?? null;
+      const trendingRankPf = tokenInfoJson?.trending_rank_pf ?? null;
+
+      if (score !== null || trendingSources.length > 0) {
+        clobrData.value = {
+          score,
+          trendingSources,
+          trendingRankJupiter,
+          trendingRankGt,
+          trendingRankSt,
+          trendingRankPf,
+        };
+      }
+    } catch (err) {
+      console.log("Clobr fetch (non-critical):", err);
+    }
+
     // Fetch Real-time SOL Price in USD
     try {
       const solRes = await fetch(
@@ -777,7 +921,8 @@ const fetchScreeningData = async () => {
       !dexscreenerData.value &&
       !meteoraData.value &&
       !jupiterData.value &&
-      !rugcheckData.value
+      !rugcheckData.value &&
+      !clobrData.value
     ) {
       message.value =
         "Data token tidak ditemukan di jaringan Solana atau alamat tidak valid.";
@@ -2142,6 +2287,106 @@ watch(
         </div>
       </div>
 
+      <!-- Clobr Data Card (Positioned below Meteora Data) -->
+      <div
+        v-if="clobrData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <img
+              src="https://www.google.com/s2/favicons?domain=clobr.io&sz=64"
+              alt="Clobr"
+              class="w-5 h-5 rounded-full"
+            />
+            Clobr Data
+          </h2>
+          <a
+            v-if="submittedAddress"
+            :href="`https://clobr.io/token/${submittedAddress}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
+          >
+            <span>View on Clobr</span>
+            <ExternalLink class="w-3.5 h-3.5" />
+          </a>
+        </div>
+
+        <!-- Metrics Grid (Clobr Score) -->
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3"
+        >
+          <!-- Clobr Score (>= 60 is green, >= 40 is yellow, < 40 is red) -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              getClobrScoreStyle(clobrData.score).card,
+            ]"
+          >
+            <p
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                getClobrScoreStyle(clobrData.score).label,
+              ]"
+            >
+              Clobr Score
+            </p>
+            <p class="text-sm font-bold mt-0.5">
+              {{
+                clobrData.score !== null && clobrData.score !== undefined
+                  ? Number(clobrData.score).toFixed(2)
+                  : "N/A"
+              }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Clobr Trending Sources Section (Following Jupiter Audit format) -->
+        <div
+          v-if="clobrTrendingItems.length"
+          class="pt-4 border-t border-gray-100 space-y-3"
+        >
+          <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+            <TrendingUp class="w-4 h-4 text-blue-600" />
+            Clobr Trending Sources
+          </h3>
+
+          <div
+            class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-3"
+          >
+            <div
+              v-for="item in clobrTrendingItems"
+              :key="item.key"
+              :class="['p-3 rounded-xl border transition-colors', item.color]"
+            >
+              <div class="flex items-center gap-1.5">
+                <img
+                  :src="item.icon"
+                  :alt="item.name"
+                  class="w-3.5 h-3.5 rounded-full"
+                />
+                <p
+                  :class="[
+                    'text-[11px] font-semibold uppercase tracking-wider truncate',
+                    item.labelColor,
+                  ]"
+                >
+                  {{ item.name }}
+                </p>
+              </div>
+              <p class="text-sm font-bold mt-0.5">
+                {{
+                  item.rank !== null && item.rank !== undefined
+                    ? '#' + item.rank
+                    : 'N/A'
+                }}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Mobula Data Card (Positioned below Meteora Data) -->
       <div
         v-if="mobulaData"
@@ -2307,7 +2552,9 @@ watch(
                   :key="index"
                   class="flex items-start text-xs text-gray-700 bg-red-50/50 p-2 rounded-lg border border-red-100"
                 >
-                  <XCircle class="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
+                  <XCircle
+                    class="w-4 h-4 text-red-500 mr-2 flex-shrink-0 mt-0.5"
+                  />
                   <span>{{
                     typeof risk === "string"
                       ? risk
