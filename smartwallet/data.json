@@ -6,7 +6,7 @@
     },
     {
         "name": "Frankdegod",
-        "category": "neutral",
+        "category": "paper-hand",
         "address": "498g1rVnFcnjBjpfw1xyqA1WvgQXUU8RWuELjxkjAayQ"
     },
     {
@@ -118,5 +118,10 @@
         "name": "Binkiee",
         "category": "neutral",
         "address": "6zMVSeukMUMKu5tDsECh4QMqrCRZqTbTvuawztFfwNti"
+    },
+    {
+        "name": "Skygawd",
+        "category": "diamond-hand",
+        "address": "2jDw1BSMu5uJjzUHKnqHnycZ4a6P7V6coEwSRHvSJqhk"
     }
 ]
