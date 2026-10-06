@@ -12,6 +12,11 @@ export default defineConfig({
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/clobr-api/, ''),
       },
+      '/solbundler-api': {
+        target: 'https://solbundler.app',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/solbundler-api/, ''),
+      },
     },
   },
 })

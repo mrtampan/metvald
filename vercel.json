@@ -5,6 +5,10 @@
       "destination": "https://clobr.io/:path*"
     },
     {
+      "source": "/solbundler-api/:path*",
+      "destination": "https://solbundler.app/:path*"
+    },
+    {
       "source": "/((?!api/|@vite/|@id/|@fs/|node_modules/|.*\\..*).*)",
       "destination": "/index.html"
     }

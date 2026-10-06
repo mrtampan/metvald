@@ -14,6 +14,9 @@ import {
   ExternalLink,
   BarChart3,
   ShieldCheck,
+  ShieldAlert,
+  Boxes,
+  Users,
   Wallet,
   Zap,
   AlertTriangle,
@@ -33,6 +36,7 @@ const tokenInput = ref(token.value);
 const isLoading = ref(false);
 const message = ref("");
 const rugcheckData = ref(null);
+const solbundlerData = ref(null);
 const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
@@ -373,6 +377,15 @@ const formatAge = (createdAt) => {
   return `${diffDays}d`;
 };
 
+const formatCompactNumber = (val) => {
+  if (val === undefined || val === null || isNaN(val)) return "0";
+  const num = Number(val);
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + "B";
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + "M";
+  if (num >= 1e3) return (num / 1e3).toFixed(2) + "K";
+  return num.toLocaleString("en-US", { maximumFractionDigits: 2 });
+};
+
 const getPoolTargetToken = (pool) => {
   if (!pool) return null;
   const addr = submittedAddress.value?.toLowerCase();
@@ -485,6 +498,7 @@ const fetchScreeningData = async () => {
   isLoading.value = true;
   message.value = "";
   rugcheckData.value = null;
+  solbundlerData.value = null;
   tokenMeta.value = null;
   riskDetails.value = null;
   dexscreenerData.value = null;
@@ -595,6 +609,40 @@ const fetchScreeningData = async () => {
       }
     } catch (err) {
       console.log("Rugcheck fetch (non-critical):", err);
+    }
+
+    // Fetch SolBundler Data (Genesis Bundle & Sniper Wallets)
+    try {
+      let sbData = null;
+      try {
+        const sbRes = await fetch(
+          `/solbundler-api/api/check-bundle?mint=${address}`,
+        );
+        if (sbRes.ok) {
+          sbData = await sbRes.json();
+        }
+      } catch (e) {
+        // Proxy fail fallback
+      }
+
+      if (!sbData || sbData.error) {
+        try {
+          const directSbRes = await fetch(
+            `https://solbundler.app/api/check-bundle?mint=${address}`,
+          );
+          if (directSbRes.ok) {
+            sbData = await directSbRes.json();
+          }
+        } catch (e) {
+          // Direct fallback fail
+        }
+      }
+
+      if (sbData && !sbData.error && (sbData.verdict || sbData.bundle)) {
+        solbundlerData.value = sbData;
+      }
+    } catch (err) {
+      console.log("SolBundler fetch (non-critical):", err);
     }
 
     try {
@@ -762,8 +810,7 @@ const fetchScreeningData = async () => {
           }),
       ]);
 
-      const scoreJson =
-        scoreRes.status === "fulfilled" ? scoreRes.value : null;
+      const scoreJson = scoreRes.status === "fulfilled" ? scoreRes.value : null;
       const tokenInfoRaw =
         tokenInfoRes.status === "fulfilled" ? tokenInfoRes.value : null;
       const tokenInfoJson = Array.isArray(tokenInfoRaw)
@@ -773,7 +820,10 @@ const fetchScreeningData = async () => {
       let score = null;
       if (scoreJson?.score !== null && scoreJson?.score !== undefined) {
         score = Number(scoreJson.score);
-      } else if (tokenInfoJson?.score !== null && tokenInfoJson?.score !== undefined) {
+      } else if (
+        tokenInfoJson?.score !== null &&
+        tokenInfoJson?.score !== undefined
+      ) {
         score = Number(tokenInfoJson.score);
       }
 
@@ -922,6 +972,7 @@ const fetchScreeningData = async () => {
       !meteoraData.value &&
       !jupiterData.value &&
       !rugcheckData.value &&
+      !solbundlerData.value &&
       !clobrData.value
     ) {
       message.value =
@@ -2378,8 +2429,8 @@ watch(
               <p class="text-sm font-bold mt-0.5">
                 {{
                   item.rank !== null && item.rank !== undefined
-                    ? '#' + item.rank
-                    : 'N/A'
+                    ? "#" + item.rank
+                    : "N/A"
                 }}
               </p>
             </div>
@@ -2570,6 +2621,417 @@ watch(
               ✓ No risks detected
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- SolBundler Data Card (Positioned below Rugcheck Data) -->
+      <div
+        v-if="solbundlerData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <!-- Card Header -->
+        <div class="flex items-center justify-between flex-wrap gap-3">
+          <div class="flex items-center gap-2.5">
+            <div
+              :class="[
+                'w-9 h-9 rounded-xl flex items-center justify-center font-bold',
+                solbundlerData.verdict === 'bundled'
+                  ? 'bg-red-50 text-red-600 border border-red-200'
+                  : 'bg-emerald-50 text-emerald-600 border border-emerald-200',
+              ]"
+            >
+              <Boxes class="w-5 h-5" />
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h2 class="text-lg font-bold text-gray-900">
+                  SolBundler Analysis
+                </h2>
+                <a
+                  href="https://solbundler.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="text-xs text-gray-400 hover:text-indigo-600 transition flex items-center gap-1 font-medium"
+                  title="Visit SolBundler"
+                >
+                  solbundler.app
+                  <ExternalLink class="w-3 h-3" />
+                </a>
+              </div>
+              <p class="text-xs text-gray-500">
+                Genesis token sniper bundle detection & supply control tracking
+              </p>
+            </div>
+          </div>
+
+          <!-- Verdict Badge -->
+          <div>
+            <div
+              v-if="solbundlerData.verdict === 'bundled'"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300 shadow-xs"
+            >
+              <AlertTriangle class="w-4 h-4 text-red-600" />
+              <span>BUNDLED DETECTED</span>
+            </div>
+            <div
+              v-else-if="solbundlerData.verdict === 'clean'"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs"
+            >
+              <CheckCircle2 class="w-4 h-4 text-emerald-600" />
+              <span>CLEAN LAUNCH</span>
+            </div>
+            <div
+              v-else
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-gray-100 text-gray-800 border border-gray-300"
+            >
+              <span>{{
+                (solbundlerData.verdict || "UNKNOWN").toUpperCase()
+              }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Verdict Banner Notice -->
+        <div
+          :class="[
+            'p-3.5 rounded-xl border text-xs flex items-start gap-3',
+            solbundlerData.verdict === 'bundled'
+              ? 'bg-red-50/80 border-red-200 text-red-900'
+              : 'bg-emerald-50/80 border-emerald-200 text-emerald-900',
+          ]"
+        >
+          <div class="mt-0.5 shrink-0">
+            <ShieldAlert
+              v-if="solbundlerData.verdict === 'bundled'"
+              class="w-4 h-4 text-red-600"
+            />
+            <ShieldCheck v-else class="w-4 h-4 text-emerald-600" />
+          </div>
+          <div class="flex-1 leading-relaxed">
+            <span v-if="solbundlerData.verdict === 'bundled'">
+              <strong>High Bundle Concentration:</strong>
+              SolBundler detected
+              <strong
+                >{{ solbundlerData.bundle?.walletCount || 0 }} bundled
+                wallets</strong
+              >
+              that acquired
+              <strong class="font-bold underline decoration-red-400">
+                {{ formatPercent(solbundlerData.bundle?.percentOfSupply) }}
+              </strong>
+              of the supply ({{
+                formatCompactNumber(solbundlerData.bundle?.tokensBought)
+              }}
+              tokens) spending
+              {{ Number(solbundlerData.bundle?.solSpent || 0).toFixed(3) }} SOL
+              in the genesis block.
+              <span
+                v-if="(solbundlerData.exitStatus?.stillHolding || 0) > 0"
+                class="text-red-700 font-semibold block mt-1"
+              >
+                ⚠️ {{ solbundlerData.exitStatus.stillHolding }} bundled
+                wallet(s) are still holding supply!
+              </span>
+              <span v-else class="text-gray-600 block mt-1">
+                ✓ All analyzed bundle wallets have fully sold (0 still holding).
+              </span>
+            </span>
+            <span v-else>
+              <strong>Clean Genesis Creation:</strong>
+              No significant coordinated multi-wallet bundling detected at
+              launch. Total bundle wallet count is
+              {{ solbundlerData.bundle?.walletCount || 0 }} ({{
+                formatPercent(solbundlerData.bundle?.percentOfSupply)
+              }}
+              of supply).
+            </span>
+          </div>
+        </div>
+
+        <!-- 4 Key Metrics Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Metric 1: Bundle Supply % -->
+          <div
+            :class="[
+              'p-3.5 rounded-xl border transition-colors',
+              (solbundlerData.bundle?.percentOfSupply || 0) >= 20
+                ? 'bg-red-50 border-red-200 text-red-700'
+                : (solbundlerData.bundle?.percentOfSupply || 0) >= 10
+                  ? 'bg-amber-50 border-amber-200 text-amber-700'
+                  : 'bg-emerald-50 border-emerald-200 text-emerald-700',
+            ]"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider opacity-80"
+            >
+              Bundle Supply
+            </p>
+            <p class="text-xl font-bold mt-1">
+              {{ formatPercent(solbundlerData.bundle?.percentOfSupply) }}
+            </p>
+            <p class="text-[11px] opacity-75 mt-0.5 truncate">
+              {{
+                formatCompactNumber(solbundlerData.bundle?.tokensBought)
+              }}
+              tokens
+            </p>
+          </div>
+
+          <!-- Metric 2: Bundle Wallets -->
+          <div
+            class="p-3.5 rounded-xl border bg-blue-50 border-blue-200 text-blue-800"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider text-blue-600"
+            >
+              Bundle Wallets
+            </p>
+            <p class="text-xl font-bold mt-1">
+              {{ solbundlerData.bundle?.walletCount || 0 }}
+              <span class="text-xs font-normal opacity-80">wallets</span>
+            </p>
+            <p class="text-[11px] text-blue-600 mt-0.5">
+              {{
+                solbundlerData.exitStatus?.walletsAnalyzed ||
+                solbundlerData.bundle?.walletCount ||
+                0
+              }}
+              analyzed
+            </p>
+          </div>
+
+          <!-- Metric 3: SOL Spent -->
+          <div
+            class="p-3.5 rounded-xl border bg-purple-50 border-purple-200 text-purple-800"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider text-purple-600"
+            >
+              SOL Spent
+            </p>
+            <p class="text-xl font-bold mt-1 font-mono">
+              {{ Number(solbundlerData.bundle?.solSpent || 0).toFixed(3) }}
+              <span class="text-xs font-normal opacity-80">SOL</span>
+            </p>
+            <p class="text-[11px] text-purple-600 mt-0.5 truncate">
+              <span v-if="solPriceUsd > 0">
+                ≈
+                {{
+                  formatCurrency(
+                    Number(solbundlerData.bundle?.solSpent || 0) * solPriceUsd,
+                  )
+                }}
+              </span>
+              <span v-else-if="solbundlerData.bundle?.walletCount">
+                ~{{
+                  (
+                    Number(solbundlerData.bundle?.solSpent || 0) /
+                    (solbundlerData.bundle.walletCount || 1)
+                  ).toFixed(3)
+                }}
+                SOL / wallet
+              </span>
+              <span v-else>Total bundle cost</span>
+            </p>
+          </div>
+
+          <!-- Metric 4: Exit Status -->
+          <div
+            :class="[
+              'p-3.5 rounded-xl border transition-colors',
+              (solbundlerData.exitStatus?.stillHolding || 0) > 0
+                ? 'bg-amber-50 border-amber-200 text-amber-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800',
+            ]"
+          >
+            <p
+              class="text-[11px] font-semibold uppercase tracking-wider opacity-80"
+            >
+              Exit Status
+            </p>
+            <div class="flex items-baseline gap-1 mt-1">
+              <p class="text-xl font-bold">
+                {{ solbundlerData.exitStatus?.stillHolding || 0 }}
+              </p>
+              <span class="text-xs font-medium opacity-80">holding</span>
+              <span class="text-xs opacity-50 mx-1">/</span>
+              <p class="text-base font-bold text-gray-700">
+                {{ solbundlerData.exitStatus?.fullyExited || 0 }}
+              </p>
+              <span class="text-xs font-normal text-gray-500">exited</span>
+            </div>
+            <p class="text-[11px] opacity-75 mt-0.5">
+              {{
+                (solbundlerData.exitStatus?.stillHolding || 0) > 0
+                  ? "Dumping risk remaining"
+                  : "100% bundle exited"
+              }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Wallets Breakdown Table -->
+        <div
+          v-if="solbundlerData.wallets && solbundlerData.wallets.length > 0"
+          class="space-y-2 pt-1"
+        >
+          <div class="flex items-center justify-between">
+            <h3
+              class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5"
+            >
+              <Users class="w-3.5 h-3.5 text-gray-500" />
+              Bundled Wallets Breakdown ({{ solbundlerData.wallets.length }})
+            </h3>
+            <span class="text-[11px] text-gray-500">
+              Sorted by bundle participation
+            </span>
+          </div>
+
+          <div class="overflow-x-auto rounded-xl border border-gray-200">
+            <table class="w-full text-left border-collapse min-w-[680px]">
+              <thead>
+                <tr
+                  class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none"
+                >
+                  <th class="py-2.5 px-3 w-10 text-center">#</th>
+                  <th class="py-2.5 px-3">Wallet Address</th>
+                  <th class="py-2.5 px-3 text-right">Tokens Bought</th>
+                  <th class="py-2.5 px-3 text-right">% of Supply</th>
+                  <th class="py-2.5 px-3 text-right">SOL Spent</th>
+                  <th class="py-2.5 px-3 text-center">Sold Status</th>
+                  <th class="py-2.5 px-3 text-center w-24">Explorer</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-100 text-xs">
+                <tr
+                  v-for="(w, idx) in solbundlerData.wallets"
+                  :key="w.address || idx"
+                  class="hover:bg-gray-50/80 transition-colors"
+                >
+                  <td
+                    class="py-2.5 px-3 text-center font-bold text-gray-400 text-[11px]"
+                  >
+                    {{ idx + 1 }}
+                  </td>
+                  <td class="py-2.5 px-3 font-mono text-gray-700">
+                    <div class="flex items-center gap-1.5">
+                      <span
+                        >{{ w.address.slice(0, 4) }}...{{
+                          w.address.slice(-4)
+                        }}</span
+                      >
+                      <button
+                        type="button"
+                        @click="copy(w.address)"
+                        class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
+                        :title="
+                          copied && copiedText === w.address
+                            ? 'Copied!'
+                            : 'Copy Address'
+                        "
+                      >
+                        <Check
+                          v-if="copied && copiedText === w.address"
+                          class="w-3.5 h-3.5 text-emerald-600"
+                        />
+                        <Copy v-else class="w-3.5 h-3.5" />
+                      </button>
+                      <span
+                        v-if="copied && copiedText === w.address"
+                        class="text-[10px] text-emerald-600 font-medium select-none"
+                      >
+                        Copied!
+                      </span>
+                    </div>
+                  </td>
+                  <td
+                    class="py-2.5 px-3 text-right font-mono font-medium text-gray-800"
+                  >
+                    {{ formatCompactNumber(w.boughtTokens) }}
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-mono font-semibold">
+                    <div class="flex items-center justify-end gap-1.5">
+                      <div
+                        class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden"
+                      >
+                        <div
+                          class="h-full rounded-full"
+                          :class="
+                            (w.percentOfSupply || 0) >= 10
+                              ? 'bg-red-500'
+                              : (w.percentOfSupply || 0) >= 3
+                                ? 'bg-amber-500'
+                                : 'bg-blue-500'
+                          "
+                          :style="{
+                            width: `${Math.min(100, (w.percentOfSupply || 0) * 4)}%`,
+                          }"
+                        ></div>
+                      </div>
+                      <span>{{ formatPercent(w.percentOfSupply) }}</span>
+                    </div>
+                  </td>
+                  <td class="py-2.5 px-3 text-right font-mono text-gray-600">
+                    {{ Number(w.solSpent || 0).toFixed(3) }} SOL
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <span
+                      v-if="w.soldPercent >= 100"
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200"
+                    >
+                      100% Sold
+                    </span>
+                    <span
+                      v-else-if="
+                        w.stillHolding > 0 || (w.soldPercent || 0) < 100
+                      "
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
+                    >
+                      Holding ({{ (100 - (w.soldPercent || 0)).toFixed(0) }}%
+                      left)
+                    </span>
+                    <span
+                      v-else
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600"
+                    >
+                      {{ w.soldPercent }}% Sold
+                    </span>
+                  </td>
+                  <td class="py-2.5 px-3 text-center">
+                    <div class="flex items-center justify-center gap-1.5">
+                      <a
+                        :href="`https://solscan.io/account/${w.address}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-gray-400 hover:text-indigo-600 transition p-1 hover:bg-gray-100 rounded"
+                        title="View on Solscan"
+                      >
+                        <ExternalLink class="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        :href="`https://gmgn.ai/sol/address/${w.address}`"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="text-[10px] font-bold text-gray-500 hover:text-emerald-600 transition px-1 py-0.5 hover:bg-gray-100 rounded border border-gray-200"
+                        title="View on GMGN"
+                      >
+                        GMGN
+                      </a>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Clean Launch (No Wallets) Fallback -->
+        <div
+          v-else-if="solbundlerData.verdict === 'clean'"
+          class="p-4 bg-emerald-50/60 border border-emerald-100 rounded-xl text-center text-xs text-emerald-800"
+        >
+          ✓ No significant bundle sniper wallets were recorded at token
+          creation.
         </div>
       </div>
 

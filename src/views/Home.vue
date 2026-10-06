@@ -139,9 +139,9 @@
               <span>🛡️</span>
               <span>Security & Audit</span>
             </div>
-            <h3 class="text-lg font-bold text-gray-900">Contract Security Audit</h3>
+            <h3 class="text-lg font-bold text-gray-900">Contract Security & Bundle Audit</h3>
             <p class="text-sm text-gray-600">
-              Verify Mint Authority, Freeze Authority, LP burn / lock percentage, and smart contract security risk score from Rugcheck.
+              Verify Mint Authority, Freeze Authority, LP burn / lock percentage, Rugcheck risk score, and SolBundler genesis sniper bundle detection.
             </p>
           </div>
 
