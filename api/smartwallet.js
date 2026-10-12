@@ -9,32 +9,38 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-
   try {
-    const dataPath = path.join(process.cwd(), "smartwallet", "data.json");
-    const meteoraDataPath = path.join(
-      process.cwd(),
-      "smartwallet",
-      "meteoraidn.json",
-    );
+    const loadWallets = (fileName, defaultSource) => {
+      const filePath = path.join(process.cwd(), "smartwallet", fileName);
+      if (!fs.existsSync(filePath)) {
+        return [];
+      }
+      try {
+        const raw = fs.readFileSync(filePath, "utf8");
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => ({
+            ...item,
+            source: item.source || defaultSource,
+          }));
+        }
+      } catch (err) {
+        console.error(`Failed to load ${fileName}:`, err);
+      }
+      return [];
+    };
 
-    const metvaldRaw = fs.readFileSync(dataPath, "utf8");
-    const meteoraidnRaw = fs.readFileSync(meteoraDataPath, "utf8");
+    const formattedMetvald = loadWallets("data.json", "metvald");
+    const formattedMeteoraidn = loadWallets("meteoraidn.json", "meteoraidn-discord");
+    const formattedUwuuai = loadWallets("uwuuai.json", "uwuuai");
+    const formattedGmgn = loadWallets("gmgndata.json", "gmgn");
 
-    const metvaldData = JSON.parse(metvaldRaw);
-    const meteoraidnData = JSON.parse(meteoraidnRaw);
-
-    const formattedMetvald = metvaldData.map((item) => ({
-      ...item,
-      source: "metvald",
-    }));
-
-    const formattedMeteoraidn = meteoraidnData.map((item) => ({
-      ...item,
-      source: "meteoraidn-discord",
-    }));
-
-    const wallets = [...formattedMetvald, ...formattedMeteoraidn];
+    const wallets = [
+      ...formattedMetvald,
+      ...formattedMeteoraidn,
+      ...formattedUwuuai,
+      ...formattedGmgn,
+    ];
 
     const token = req.query.token || req.query.address || "";
     let holders = [];
