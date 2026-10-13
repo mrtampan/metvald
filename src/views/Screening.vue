@@ -58,6 +58,83 @@ const top10Percentage = ref(0);
 const smartWalletList = ref([]);
 const smartWalletData = ref([]);
 const isSmartWalletLoading = ref(false);
+const geckoterminalData = ref(null);
+
+const getScoreColorClass = (val, key) => {
+  if (key && String(key).toLowerCase() === "creation") {
+    return "bg-gray-50 border-gray-200 text-gray-900";
+  }
+  if (val == null || isNaN(val))
+    return "bg-gray-50 border-gray-200 text-gray-700";
+  const num = Number(val);
+  if (num >= 80) return "bg-emerald-50 border-emerald-200 text-emerald-700";
+  if (num >= 50) return "bg-amber-50 border-amber-200 text-amber-700";
+  return "bg-red-50 border-red-200 text-red-700";
+};
+
+const getScoreTextColorClass = (val, key) => {
+  if (key && String(key).toLowerCase() === "creation") {
+    return "text-gray-500";
+  }
+  if (val == null || isNaN(val)) return "text-gray-500";
+  const num = Number(val);
+  if (num >= 80) return "text-emerald-600";
+  if (num >= 50) return "text-amber-600";
+  return "text-red-600";
+};
+
+const getScoreBadgeClass = (val) => {
+  if (val == null || isNaN(val))
+    return "bg-gray-100 text-gray-700 border-gray-200";
+  const num = Number(val);
+  if (num >= 80) return "bg-emerald-100 text-emerald-800 border-emerald-200";
+  if (num >= 50) return "bg-amber-100 text-amber-800 border-amber-200";
+  return "bg-red-100 text-red-800 border-red-200";
+};
+
+const getScoreBarClass = (val, key) => {
+  if (key && String(key).toLowerCase() === "creation") {
+    return "bg-gray-400";
+  }
+  if (val == null || isNaN(val)) return "bg-gray-300";
+  const num = Number(val);
+  if (num >= 80) return "bg-emerald-500";
+  if (num >= 50) return "bg-amber-500";
+  return "bg-red-500";
+};
+
+const formatScoreValue = (val) => {
+  if (val == null || isNaN(val)) return "0 / 100";
+  const num = Number(val);
+  const formatted = num % 1 === 0 ? num : Number(num.toFixed(2));
+  return `${formatted} / 100`;
+};
+
+const formatScoreLabel = (key) => {
+  const map = {
+    info: "INFO",
+    pool: "POOL",
+    transactions: "Transactions",
+    holders: "Holder",
+    creation: "Creation",
+  };
+  if (map[String(key).toLowerCase()]) return map[String(key).toLowerCase()];
+  return String(key)
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+};
+
+const gtSecurityDetailKeys = computed(() => {
+  if (!geckoterminalData.value?.gtScoreDetails) return [];
+  const details = geckoterminalData.value.gtScoreDetails;
+  const ordered = ["info", "pool", "transactions", "holders", "creation"];
+  const keys = ordered.filter((k) => k in details);
+  Object.keys(details).forEach((k) => {
+    if (!keys.includes(k)) keys.push(k);
+  });
+  return keys;
+});
 
 const getCategoryBadgeClass = (category) => {
   const cat = (category || "").toLowerCase().replace(/[^a-z]/g, "");
@@ -487,6 +564,30 @@ const sortedMeteoraPools = computed(() => {
   });
 });
 
+const fetchGeckoTerminalData = async (pairAddress) => {
+  if (!pairAddress) return;
+  try {
+    const res = await fetch(
+      `/api/geckoterminal?pool=${encodeURIComponent(pairAddress)}`,
+    );
+    if (res.ok) {
+      const gtJson = await res.json();
+      const attributes = gtJson?.data?.attributes;
+      if (attributes) {
+        geckoterminalData.value = {
+          gtScore:
+            attributes.gt_score != null ? Number(attributes.gt_score) : null,
+          gtScoreDetails: attributes.gt_score_details || null,
+          poolName: attributes.name || null,
+          poolAddress: attributes.address || pairAddress,
+        };
+      }
+    }
+  } catch (err) {
+    console.log("GeckoTerminal fetch (non-critical):", err);
+  }
+};
+
 const fetchScreeningData = async () => {
   const address = token.value.trim();
 
@@ -514,6 +615,7 @@ const fetchScreeningData = async () => {
   totalHoldersCount.value = 0;
   top10Percentage.value = 0;
   smartWalletData.value = [];
+  geckoterminalData.value = null;
   submittedAddress.value = address;
 
   try {
@@ -663,7 +765,11 @@ const fetchScreeningData = async () => {
             imageUrl: pair.info?.imageUrl || "",
             socials: pair.info?.socials,
             websites: pair.info?.websites,
+            pairAddress: pair.pairAddress,
           };
+          if (pair.pairAddress) {
+            fetchGeckoTerminalData(pair.pairAddress);
+          }
         }
       }
     } catch (err) {
@@ -1938,6 +2044,157 @@ watch(
         </div>
       </div>
 
+      <!-- GeckoTerminal Data Card (Positioned below Jupiter Card) -->
+      <div
+        v-if="geckoterminalData"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <img
+              src="https://www.google.com/s2/favicons?domain=geckoterminal.com&sz=64"
+              alt="GeckoTerminal"
+              class="w-5 h-5 rounded-full"
+            />
+            GeckoTerminal Data
+          </h2>
+
+          <div class="flex items-center gap-2">
+            <span
+              v-if="geckoterminalData.poolName"
+              class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200"
+            >
+              {{ geckoterminalData.poolName }}
+            </span>
+            <a
+              v-if="geckoterminalData.poolAddress"
+              :href="`https://www.geckoterminal.com/solana/pools/${geckoterminalData.poolAddress}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
+            >
+              View on GeckoTerminal
+              <ExternalLink class="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </div>
+
+        <!-- Main Metric: GT Score -->
+        <div
+          class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3"
+        >
+          <!-- GT Score -->
+          <div
+            :class="[
+              'p-3.5 rounded-xl border transition-colors flex flex-col justify-between',
+              getScoreColorClass(geckoterminalData.gtScore),
+            ]"
+          >
+            <div>
+              <div class="flex items-center justify-between gap-1">
+                <p
+                  :class="[
+                    'text-[11px] font-bold uppercase tracking-wider',
+                    getScoreTextColorClass(geckoterminalData.gtScore),
+                  ]"
+                >
+                  GT Score
+                </p>
+                <span
+                  :class="[
+                    'text-[9px] font-extrabold px-1.5 py-0.5 rounded border uppercase',
+                    getScoreBadgeClass(geckoterminalData.gtScore),
+                  ]"
+                >
+                  {{
+                    geckoterminalData.gtScore >= 80
+                      ? "Good"
+                      : geckoterminalData.gtScore >= 50
+                        ? "Fair"
+                        : "Low"
+                  }}
+                </span>
+              </div>
+              <p class="text-base font-extrabold mt-1">
+                {{ formatScoreValue(geckoterminalData.gtScore) }}
+              </p>
+            </div>
+            <!-- Progress bar -->
+            <div
+              class="w-full bg-white/60 rounded-full h-1.5 mt-2.5 overflow-hidden"
+            >
+              <div
+                :class="[
+                  'h-1.5 rounded-full',
+                  getScoreBarClass(geckoterminalData.gtScore),
+                ]"
+                :style="{
+                  width: `${Math.min(100, Math.max(0, Number(geckoterminalData.gtScore) || 0))}%`,
+                }"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- GT Security Detail Subtitle Section -->
+        <div
+          v-if="geckoterminalData.gtScoreDetails"
+          class="pt-4 border-t border-gray-100 space-y-3"
+        >
+          <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+            <ShieldCheck class="w-4 h-4 text-emerald-600" />
+            GT Security Detail
+          </h3>
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+            <div
+              v-for="key in gtSecurityDetailKeys"
+              :key="key"
+              :class="[
+                'p-3.5 rounded-xl border transition-colors flex flex-col justify-between',
+                getScoreColorClass(geckoterminalData.gtScoreDetails[key], key),
+              ]"
+            >
+              <div>
+                <div class="flex items-center justify-between gap-1">
+                  <p
+                    :class="[
+                      'text-[11px] font-semibold uppercase tracking-wider',
+                      getScoreTextColorClass(
+                        geckoterminalData.gtScoreDetails[key],
+                        key,
+                      ),
+                    ]"
+                  >
+                    {{ formatScoreLabel(key) }}
+                  </p>
+                </div>
+                <p class="text-base font-extrabold mt-1">
+                  {{ formatScoreValue(geckoterminalData.gtScoreDetails[key]) }}
+                </p>
+              </div>
+              <!-- Progress bar -->
+              <div
+                class="w-full bg-white/60 rounded-full h-1.5 mt-2.5 overflow-hidden"
+              >
+                <div
+                  :class="[
+                    'h-1.5 rounded-full',
+                    getScoreBarClass(
+                      geckoterminalData.gtScoreDetails[key],
+                      key,
+                    ),
+                  ]"
+                  :style="{
+                    width: `${Math.min(100, Math.max(0, Number(geckoterminalData.gtScoreDetails[key]) || 0))}%`,
+                  }"
+                ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Smart Wallet List Card -->
       <div
         v-if="submittedAddress"
@@ -2074,10 +2331,10 @@ watch(
                       wallet.source === 'metvald'
                         ? 'bg-purple-50 text-purple-700 border-purple-200'
                         : wallet.source === 'uwuuai'
-                        ? 'bg-pink-50 text-pink-700 border-pink-200'
-                        : wallet.source === 'gmgn'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : 'bg-indigo-50 text-indigo-700 border-indigo-200',
+                          ? 'bg-pink-50 text-pink-700 border-pink-200'
+                          : wallet.source === 'gmgn'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : 'bg-indigo-50 text-indigo-700 border-indigo-200',
                     ]"
                   >
                     {{ wallet.source }}
@@ -2774,9 +3031,7 @@ watch(
               {{ formatPercent(solbundlerData.bundle?.percentOfSupply) }}
             </p>
             <p class="text-[11px] opacity-75 mt-0.5 truncate">
-              {{
-                formatCompactNumber(solbundlerData.bundle?.tokensBought)
-              }}
+              {{ formatCompactNumber(solbundlerData.bundle?.tokensBought) }}
               tokens
             </p>
           </div>
