@@ -1,132 +1,137 @@
 [
-    {
-        "name": "Gake",
-        "category": "neutral",
-        "address": "DNfuF1L62WWyW3pNakVkyGGFzVVhj4Yr52jSmdTyeBHm"
-    },
-    {
-        "name": "Frankdegod",
-        "category": "paper-hand",
-        "address": "498g1rVnFcnjBjpfw1xyqA1WvgQXUU8RWuELjxkjAayQ"
-    },
-    {
-        "name": "Rosecalender",
-        "category": "neutral",
-        "address": "DxM1hfY8FQ8dNGrucuJzhJcF8KRbjk8WBwrgKvQ9spPv"
-    },
-    {
-        "name": "Ansem",
-        "category": "diamond-hand",
-        "address": "AVAZvHLR2PcWpDf8BXY4rVxNHYRBytycHkcB5z5QNXYm"
-    },
-    {
-        "name": "Theveeman",
-        "category": "diamond-hand",
-        "address": "F5hkYsi8JxjyA2JHN5CA7MbnnhWubkXB2ZQB7Gkaxqs6"
-    },
-    {
-        "name": "PoorGoat",
-        "category": "diamond-hand",
-        "address": "HDixbrzwwLXczhDBk1JVrurPQsuLE8FUKnW2pucSXN3o"
-    },
-    {
-        "name": "TheSolstice",
-        "category": "diamond-hand",
-        "address": "4ugDhHJ8XDXAeABmrNmGffFaLbJb9BkPyiFGVSV9ocwo"
-    },
-    {
-        "name": "Pointfarmcap",
-        "category": "diamond-hand",
-        "address": "Beqv6dzTcjV2eodo8RRXCiCcnSYrS1vkQKhfqwHXqeit"
-    },
-    {
-        "name": "Aurelius0121",
-        "category": "diamond-hand",
-        "address": "9BMzTpSo4URse1oN666pmexhdjpU1vA5p7LtroCFQdLU"
-    },
-    {
-        "name": "Rowdy",
-        "category": "neutral",
-        "address": "CzU8MaRcwvwUoNkwJFLbvtFWJugcEXAhDDQqNFE4ybb7"
-    },
-    {
-        "name": "ethermonk",
-        "category": "diamond-hand",
-        "address": "2xUbYAVq1oJGj45d6JjnaYHAke3NQecUcqWvvVbwmYw8"
-    },
-    {
-        "name": "Jotagezin",
-        "category": "neutral",
-        "address": "4hwPamSooBr5JhxHdcEC21HoxN5HUwYR2hGucLPyZAi8"
-    },
-    {
-        "name": "Squid",
-        "category": "neutral",
-        "address": "F1a7cR49s7VsKz8XGanFBfsbNE2M91hgKkkDhDjv44w6"
-    },
-    {
-        "name": "Dipwheeler",
-        "category": "neutral",
-        "address": "BMgsHTvcasRVtuevHJh8t6Vf5dmcWkDLAx6gSAQ3dsYm"
-    },
-    {
-        "name": "Loganlim",
-        "category": "neutral",
-        "address": "4cdzCdpZpw476py42q3ChStwmHsYo4CfHroaQzsnMrSN"
-    },
-    {
-        "name": "Rasmr",
-        "category": "neutral",
-        "address": "9CNyLECt2j8tnDhqxtjYk5HUhZ2b8Nwnyb7sfYN7vND2"
-    },
-    {
-        "name": "TraderPow",
-        "category": "neutral",
-        "address": "7eNRALuXYUJkUWTvRj5tcB7tcT43kmT5SNdkfy9fKTto"
-    },
-    {
-        "name": "IruleTrenches",
-        "category": "diamond-hand",
-        "address": "DyXg3Xp6BoMq5K6Nmdb7hEzPMpkRWH2aXHHZhUgN1gd6"
-    },
-    {
-        "name": "DegenCapicalLLC",
-        "category": "neutral",
-        "address": "4CRX74nxAdmFY4Eh1WhTrmYqHoxwxGzwXfgzTWvhUfFn"
-    },
-    {
-        "name": "Sadcrissy",
-        "category": "neutral",
-        "address": "2GtmuqG31LuuWQmKzeK72YjH5iALPkJycuQaEQGsFzLw"
-    },
-    {
-        "name": "Diaper",
-        "category": "paper-hand",
-        "address": "BLvwUkZWoBmXM7zqUnjDGVFtyDo67WhCCyXj4itVENG5"
-    },
-    {
-        "name": "Unipcs",
-        "category": "diamond-hand",
-        "address": "2heJbC32Tpfcb3nbUb5ER61K11FGZVfVGtVnDm6LDogF"
-    },
-    {
-        "name": "Rodotfun",
-        "category": "diamond-hand",
-        "address": "AxtZoNYhAxvpv416hW7yzpTdcJeY45t8JyGUYMJXL9G"
-    },
-    {
-        "name": "Binkiee",
-        "category": "neutral",
-        "address": "6zMVSeukMUMKu5tDsECh4QMqrCRZqTbTvuawztFfwNti"
-    },
-    {
-        "name": "Skygawd",
-        "category": "diamond-hand",
-        "address": "2jDw1BSMu5uJjzUHKnqHnycZ4a6P7V6coEwSRHvSJqhk"
-    },
-    {
-        "name": "Mudo9453",
-        "category": "diamond-hand",
-        "address": "Df7DsBZPhHKK6qxG7DQ1jNQ7J5HbJw1eZLhG4M1DWhLH"
-    }
+  {
+    "name": "Gake",
+    "category": "neutral",
+    "address": "DNfuF1L62WWyW3pNakVkyGGFzVVhj4Yr52jSmdTyeBHm"
+  },
+  {
+    "name": "Frankdegod",
+    "category": "paper-hand",
+    "address": "498g1rVnFcnjBjpfw1xyqA1WvgQXUU8RWuELjxkjAayQ"
+  },
+  {
+    "name": "Rosecalender",
+    "category": "neutral",
+    "address": "DxM1hfY8FQ8dNGrucuJzhJcF8KRbjk8WBwrgKvQ9spPv"
+  },
+  {
+    "name": "Ansem",
+    "category": "diamond-hand",
+    "address": "AVAZvHLR2PcWpDf8BXY4rVxNHYRBytycHkcB5z5QNXYm"
+  },
+  {
+    "name": "Theveeman",
+    "category": "diamond-hand",
+    "address": "F5hkYsi8JxjyA2JHN5CA7MbnnhWubkXB2ZQB7Gkaxqs6"
+  },
+  {
+    "name": "PoorGoat",
+    "category": "diamond-hand",
+    "address": "HDixbrzwwLXczhDBk1JVrurPQsuLE8FUKnW2pucSXN3o"
+  },
+  {
+    "name": "TheSolstice",
+    "category": "diamond-hand",
+    "address": "4ugDhHJ8XDXAeABmrNmGffFaLbJb9BkPyiFGVSV9ocwo"
+  },
+  {
+    "name": "Pointfarmcap",
+    "category": "diamond-hand",
+    "address": "Beqv6dzTcjV2eodo8RRXCiCcnSYrS1vkQKhfqwHXqeit"
+  },
+  {
+    "name": "Aurelius0121",
+    "category": "diamond-hand",
+    "address": "9BMzTpSo4URse1oN666pmexhdjpU1vA5p7LtroCFQdLU"
+  },
+  {
+    "name": "Rowdy",
+    "category": "neutral",
+    "address": "CzU8MaRcwvwUoNkwJFLbvtFWJugcEXAhDDQqNFE4ybb7"
+  },
+  {
+    "name": "ethermonk",
+    "category": "diamond-hand",
+    "address": "2xUbYAVq1oJGj45d6JjnaYHAke3NQecUcqWvvVbwmYw8"
+  },
+  {
+    "name": "Jotagezin",
+    "category": "neutral",
+    "address": "4hwPamSooBr5JhxHdcEC21HoxN5HUwYR2hGucLPyZAi8"
+  },
+  {
+    "name": "Squid",
+    "category": "neutral",
+    "address": "F1a7cR49s7VsKz8XGanFBfsbNE2M91hgKkkDhDjv44w6"
+  },
+  {
+    "name": "Dipwheeler",
+    "category": "neutral",
+    "address": "BMgsHTvcasRVtuevHJh8t6Vf5dmcWkDLAx6gSAQ3dsYm"
+  },
+  {
+    "name": "Loganlim",
+    "category": "neutral",
+    "address": "4cdzCdpZpw476py42q3ChStwmHsYo4CfHroaQzsnMrSN"
+  },
+  {
+    "name": "Rasmr",
+    "category": "neutral",
+    "address": "9CNyLECt2j8tnDhqxtjYk5HUhZ2b8Nwnyb7sfYN7vND2"
+  },
+  {
+    "name": "TraderPow",
+    "category": "neutral",
+    "address": "7eNRALuXYUJkUWTvRj5tcB7tcT43kmT5SNdkfy9fKTto"
+  },
+  {
+    "name": "IruleTrenches",
+    "category": "diamond-hand",
+    "address": "DyXg3Xp6BoMq5K6Nmdb7hEzPMpkRWH2aXHHZhUgN1gd6"
+  },
+  {
+    "name": "DegenCapicalLLC",
+    "category": "neutral",
+    "address": "4CRX74nxAdmFY4Eh1WhTrmYqHoxwxGzwXfgzTWvhUfFn"
+  },
+  {
+    "name": "Sadcrissy",
+    "category": "neutral",
+    "address": "2GtmuqG31LuuWQmKzeK72YjH5iALPkJycuQaEQGsFzLw"
+  },
+  {
+    "name": "Diaper",
+    "category": "paper-hand",
+    "address": "BLvwUkZWoBmXM7zqUnjDGVFtyDo67WhCCyXj4itVENG5"
+  },
+  {
+    "name": "Unipcs",
+    "category": "diamond-hand",
+    "address": "2heJbC32Tpfcb3nbUb5ER61K11FGZVfVGtVnDm6LDogF"
+  },
+  {
+    "name": "Rodotfun",
+    "category": "diamond-hand",
+    "address": "AxtZoNYhAxvpv416hW7yzpTdcJeY45t8JyGUYMJXL9G"
+  },
+  {
+    "name": "Binkiee",
+    "category": "neutral",
+    "address": "6zMVSeukMUMKu5tDsECh4QMqrCRZqTbTvuawztFfwNti"
+  },
+  {
+    "name": "Skygawd",
+    "category": "diamond-hand",
+    "address": "2jDw1BSMu5uJjzUHKnqHnycZ4a6P7V6coEwSRHvSJqhk"
+  },
+  {
+    "name": "Mudo9453",
+    "category": "diamond-hand",
+    "address": "Df7DsBZPhHKK6qxG7DQ1jNQ7J5HbJw1eZLhG4M1DWhLH"
+  },
+  {
+    "name": "DumbCrayonEater",
+    "category": "diamond-hand",
+    "address": "5FGoPPj1nL8LCnfVnpTmreqQtqLuMXXAwuS1uahMrp8V"
+  }
 ]
