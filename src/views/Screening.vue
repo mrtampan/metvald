@@ -136,6 +136,49 @@ const gtSecurityDetailKeys = computed(() => {
   return keys;
 });
 
+const gtInsightxKeys = computed(() => {
+  if (!geckoterminalData.value?.insightxSecurityData) return [];
+  const data = geckoterminalData.value.insightxSecurityData;
+  const ordered = [
+    "dev_pct",
+    "top10_pct",
+    "cluster_pct",
+    "snipers_pct",
+    "bundlers_pct",
+    "insiders_pct",
+  ];
+  const keys = ordered.filter((k) => k in data);
+  Object.keys(data).forEach((k) => {
+    if (!keys.includes(k)) keys.push(k);
+  });
+  return keys;
+});
+
+const formatInsightxLabel = (key) => {
+  const map = {
+    dev_pct: "Dev",
+    top10_pct: "Top 10",
+    cluster_pct: "Cluster",
+    snipers_pct: "Snipers",
+    bundlers_pct: "Bundlers",
+    insiders_pct: "Insiders",
+  };
+  if (map[String(key).toLowerCase()]) return map[String(key).toLowerCase()];
+  return String(key)
+    .replace(/_pct$/i, "")
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+};
+
+const formatInsightxValue = (val) => {
+  if (val == null || isNaN(val)) return "0%";
+  const num = Number(val);
+  if (num === 0) return "0%";
+  if (num < 0.01) return `${num.toFixed(4)}%`;
+  return `${num.toFixed(2)}%`;
+};
+
 const getCategoryBadgeClass = (category) => {
   const cat = (category || "").toLowerCase().replace(/[^a-z]/g, "");
   if (cat.includes("diamond")) {
@@ -573,13 +616,27 @@ const fetchGeckoTerminalData = async (pairAddress) => {
     if (res.ok) {
       const gtJson = await res.json();
       const attributes = gtJson?.data?.attributes;
-      if (attributes) {
+      const baseTokenId = gtJson?.data?.attributes?.base_token_id;
+      const included = Array.isArray(gtJson?.included) ? gtJson.included : [];
+
+      // Cari data "token_security_metric" lalu cocokkan dengan base_token_id
+      const tokenSecurityMetric = included.find(
+        (item) =>
+          item.type === "token_security_metric" &&
+          String(item.relationships?.token?.data?.id) === String(baseTokenId),
+      );
+
+      const insightxSecurityData =
+        tokenSecurityMetric?.attributes?.insightx_security_data || null;
+
+      if (attributes || tokenSecurityMetric) {
         geckoterminalData.value = {
           gtScore:
-            attributes.gt_score != null ? Number(attributes.gt_score) : null,
-          gtScoreDetails: attributes.gt_score_details || null,
-          poolName: attributes.name || null,
-          poolAddress: attributes.address || pairAddress,
+            attributes?.gt_score != null ? Number(attributes.gt_score) : null,
+          gtScoreDetails: attributes?.gt_score_details || null,
+          poolName: attributes?.name || null,
+          poolAddress: attributes?.address || pairAddress,
+          insightxSecurityData,
         };
       }
     }
@@ -2136,59 +2193,93 @@ watch(
           </div>
         </div>
 
-        <!-- GT Security Detail Subtitle Section -->
+        <!-- GT Security Detail & GT insightx Row (Colspan-6 each) -->
         <div
-          v-if="geckoterminalData.gtScoreDetails"
-          class="pt-4 border-t border-gray-100 space-y-3"
+          v-if="geckoterminalData.gtScoreDetails || geckoterminalData.insightxSecurityData"
+          class="pt-4 border-t border-gray-100 grid grid-cols-1 lg:grid-cols-12 gap-5"
         >
-          <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
-            <ShieldCheck class="w-4 h-4 text-emerald-600" />
-            GT Security Detail
-          </h3>
+          <!-- GT Security Detail (colspan-6) -->
+          <div
+            v-if="geckoterminalData.gtScoreDetails"
+            :class="geckoterminalData.insightxSecurityData ? 'col-span-12 lg:col-span-6' : 'col-span-12'"
+            class="space-y-3"
+          >
+            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+              <ShieldCheck class="w-4 h-4 text-emerald-600" />
+              GT Security Detail
+            </h3>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-            <div
-              v-for="key in gtSecurityDetailKeys"
-              :key="key"
-              :class="[
-                'p-3.5 rounded-xl border transition-colors flex flex-col justify-between',
-                getScoreColorClass(geckoterminalData.gtScoreDetails[key], key),
-              ]"
-            >
-              <div>
-                <div class="flex items-center justify-between gap-1">
-                  <p
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+              <div
+                v-for="key in gtSecurityDetailKeys"
+                :key="key"
+                :class="[
+                  'p-3 rounded-xl border transition-colors flex flex-col justify-between',
+                  getScoreColorClass(geckoterminalData.gtScoreDetails[key], key),
+                ]"
+              >
+                <div>
+                  <div class="flex items-center justify-between gap-1">
+                    <p
+                      :class="[
+                        'text-[11px] font-semibold uppercase tracking-wider',
+                        getScoreTextColorClass(
+                          geckoterminalData.gtScoreDetails[key],
+                          key,
+                        ),
+                      ]"
+                    >
+                      {{ formatScoreLabel(key) }}
+                    </p>
+                  </div>
+                  <p class="text-base font-extrabold mt-1">
+                    {{ formatScoreValue(geckoterminalData.gtScoreDetails[key]) }}
+                  </p>
+                </div>
+                <!-- Progress bar -->
+                <div
+                  class="w-full bg-white/60 rounded-full h-1.5 mt-2.5 overflow-hidden"
+                >
+                  <div
                     :class="[
-                      'text-[11px] font-semibold uppercase tracking-wider',
-                      getScoreTextColorClass(
+                      'h-1.5 rounded-full',
+                      getScoreBarClass(
                         geckoterminalData.gtScoreDetails[key],
                         key,
                       ),
                     ]"
-                  >
-                    {{ formatScoreLabel(key) }}
-                  </p>
+                    :style="{
+                      width: `${Math.min(100, Math.max(0, Number(geckoterminalData.gtScoreDetails[key]) || 0))}%`,
+                    }"
+                  ></div>
                 </div>
-                <p class="text-base font-extrabold mt-1">
-                  {{ formatScoreValue(geckoterminalData.gtScoreDetails[key]) }}
-                </p>
               </div>
-              <!-- Progress bar -->
+            </div>
+          </div>
+
+          <!-- GT insightx (colspan-6) -->
+          <div
+            v-if="geckoterminalData.insightxSecurityData"
+            :class="geckoterminalData.gtScoreDetails ? 'col-span-12 lg:col-span-6' : 'col-span-12'"
+            class="space-y-3"
+          >
+            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+              <ShieldAlert class="w-4 h-4 text-amber-500" />
+              GT insightx
+            </h3>
+
+            <div class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
               <div
-                class="w-full bg-white/60 rounded-full h-1.5 mt-2.5 overflow-hidden"
+                v-for="key in gtInsightxKeys"
+                :key="key"
+                class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex flex-col justify-between"
               >
-                <div
-                  :class="[
-                    'h-1.5 rounded-full',
-                    getScoreBarClass(
-                      geckoterminalData.gtScoreDetails[key],
-                      key,
-                    ),
-                  ]"
-                  :style="{
-                    width: `${Math.min(100, Math.max(0, Number(geckoterminalData.gtScoreDetails[key]) || 0))}%`,
-                  }"
-                ></div>
+                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                  {{ formatInsightxLabel(key) }}
+                </p>
+                <p class="text-base font-extrabold text-gray-900 mt-1">
+                  {{ formatInsightxValue(geckoterminalData.insightxSecurityData[key]) }}
+                </p>
               </div>
             </div>
           </div>
