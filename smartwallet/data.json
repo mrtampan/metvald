@@ -133,5 +133,15 @@
     "name": "DumbCrayonEater",
     "category": "diamond-hand",
     "address": "5FGoPPj1nL8LCnfVnpTmreqQtqLuMXXAwuS1uahMrp8V"
+  },
+  {
+    "name": "RoarringKitty",
+    "category": "neutral",
+    "address": "8FBZQ1dEExbtHXpEuCyy8R1jhvyxEkkh5Pb8ajK8zj4g"
+  },
+  {
+    "name": "BigBabba",
+    "category": "neutral",
+    "address": "mDR91ufq4S2uSHa9E2PYL7xg4LwcQXaQFP7YK864a1z"
   }
 ]
