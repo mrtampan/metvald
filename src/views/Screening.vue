@@ -23,6 +23,7 @@ import {
   XCircle,
   Layers,
   TrendingUp,
+  ChevronDown,
 } from "@lucide/vue";
 import { useScreeningStore } from "../stores/screeningStore";
 import { getSmartWallets } from "../smart_wallet/index.js";
@@ -37,6 +38,30 @@ const isLoading = ref(false);
 const message = ref("");
 const rugcheckData = ref(null);
 const solbundlerData = ref(null);
+const isBundledWalletsOpen = ref(false);
+
+const isBundlerAllExited = computed(() => {
+  if (!solbundlerData.value) return false;
+  const exitStatus = solbundlerData.value.exitStatus;
+  if (
+    exitStatus &&
+    exitStatus.stillHolding !== undefined &&
+    exitStatus.stillHolding !== null
+  ) {
+    return Number(exitStatus.stillHolding) === 0;
+  }
+  if (
+    Array.isArray(solbundlerData.value.wallets) &&
+    solbundlerData.value.wallets.length > 0
+  ) {
+    return solbundlerData.value.wallets.every(
+      (w) =>
+        (w.soldPercent != null && Number(w.soldPercent) >= 100) ||
+        (w.stillHolding != null && Number(w.stillHolding) === 0),
+    );
+  }
+  return false;
+});
 const tokenMeta = ref(null);
 const riskDetails = ref(null);
 const dexscreenerData = ref(null);
@@ -260,6 +285,13 @@ const insiderWalletsCount = ref(0);
 const insiderSupplyPct = ref(0);
 
 const selectedChart = ref("dexscreener");
+const isChartVisible = ref(
+  localStorage.getItem("screening_chart_mode") === "on",
+);
+
+watch(isChartVisible, (val) => {
+  localStorage.setItem("screening_chart_mode", val ? "on" : "off");
+});
 
 const chartPlatforms = [
   { id: "dexscreener", name: "DexScreener" },
@@ -657,6 +689,7 @@ const fetchScreeningData = async () => {
   message.value = "";
   rugcheckData.value = null;
   solbundlerData.value = null;
+  isBundledWalletsOpen.value = false;
   tokenMeta.value = null;
   riskDetails.value = null;
   dexscreenerData.value = null;
@@ -1504,25 +1537,60 @@ watch(
           class="space-y-3 pt-2 border-t border-gray-100"
         >
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <!-- Embeddable Chart Tabs -->
-            <div class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl">
+            <div class="flex items-center gap-2 flex-wrap">
+              <!-- Mode ON/OFF Button -->
               <button
-                v-for="platform in chartPlatforms"
-                :key="platform.id"
-                @click="selectedChart = platform.id"
-                :class="[
-                  'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer',
-                  selectedChart === platform.id
-                    ? 'bg-white text-gray-900 shadow-xs font-bold'
-                    : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/60',
-                ]"
+                type="button"
+                @click="isChartVisible = !isChartVisible"
+                class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-bold rounded-xl border transition cursor-pointer select-none"
+                :class="
+                  isChartVisible
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100 shadow-2xs'
+                    : 'bg-gray-100 text-gray-500 border-gray-300 hover:bg-gray-200'
+                "
+                title="Toggle Chart Display (On / Off)"
               >
-                <span>{{ platform.name }}</span>
+                <BarChart3
+                  class="w-3.5 h-3.5"
+                  :class="isChartVisible ? 'text-emerald-600' : 'text-gray-400'"
+                />
+                <span>Chart</span>
+                <span
+                  class="px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider"
+                  :class="
+                    isChartVisible
+                      ? 'bg-emerald-200/80 text-emerald-900'
+                      : 'bg-gray-200 text-gray-600'
+                  "
+                >
+                  {{ isChartVisible ? "ON" : "OFF" }}
+                </span>
               </button>
+
+              <!-- Embeddable Chart Tabs (shown when chart is ON) -->
+              <div
+                v-if="isChartVisible"
+                class="flex items-center gap-1.5 bg-gray-100 p-1 rounded-xl"
+              >
+                <button
+                  v-for="platform in chartPlatforms"
+                  :key="platform.id"
+                  @click="selectedChart = platform.id"
+                  :class="[
+                    'px-3 py-1.5 text-xs font-semibold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer',
+                    selectedChart === platform.id
+                      ? 'bg-white text-gray-900 shadow-xs font-bold'
+                      : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/60',
+                  ]"
+                >
+                  <span>{{ platform.name }}</span>
+                </button>
+              </div>
             </div>
 
             <!-- Open in Active Embed Chart -->
             <a
+              v-if="isChartVisible"
               :href="currentChartExternalUrl"
               target="_blank"
               rel="noopener noreferrer"
@@ -1536,6 +1604,7 @@ watch(
 
           <!-- Embedded Chart Container (DexScreener / GMGN / GeckoTerminal) -->
           <div
+            v-if="isChartVisible"
             class="rounded-xl overflow-hidden border border-gray-200 bg-gray-50 relative"
           >
             <iframe
@@ -1545,131 +1614,151 @@ watch(
               allowfullscreen
             ></iframe>
           </div>
-
-          <!-- External Tool Links (Below Chart) -->
-          <div
-            v-if="externalRedirectLinks.length"
-            class="pt-3 border-t border-gray-100 flex flex-wrap items-center justify-between gap-2"
-          >
-            <div
-              class="flex items-center gap-1.5 text-xs font-semibold text-gray-500"
-            >
-              <ExternalLink class="w-4 h-4 text-gray-400" />
-              <span>External Tools:</span>
-            </div>
-            <div class="flex flex-wrap items-center gap-2">
-              <a
-                v-for="tool in externalRedirectLinks"
-                :key="tool.id"
-                :href="tool.url"
-                target="_blank"
-                rel="noopener noreferrer"
-                :class="[
-                  'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition shadow-2xs',
-                  tool.bgClass,
-                ]"
-                :title="tool.name"
-              >
-                <img
-                  :src="tool.icon"
-                  :alt="tool.name"
-                  class="w-3.5 h-3.5 rounded-xs object-contain"
-                />
-                <span>{{ tool.name }}</span>
-                <ExternalLink class="w-3 h-3 opacity-60" />
-              </a>
-            </div>
-          </div>
         </div>
       </div>
 
-      <!-- Token Analytics Card (Market Cap, Liquidity, 24h Volume, DEX) -->
+      <!-- Dexscreener Data Card (Market Cap, Liquidity, 24h Volume, DEX) -->
       <div
         v-if="dexscreenerData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
       >
-        <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
-          <BarChart3 class="w-5 h-5 text-indigo-600" />
-          Token Analytics
-        </h2>
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
+            <img
+              src="/dexscreener.ico"
+              alt="DexScreener"
+              class="w-5 h-5 rounded-full object-contain shrink-0"
+              @error="
+                (e) => (e.target.src = 'https://dexscreener.com/favicon.ico')
+              "
+            />
+            Dexscreener Data
+          </h2>
+        </div>
 
         <!-- Metrics Grid (Market Cap, Liquidity, 24h Volume, DEX) -->
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <!-- Market Cap -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              dexscreenerData?.mcap != null
+                ? dexscreenerData.mcap >= 250000
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-gray-50 border-gray-200 text-gray-900',
+            ]"
+          >
             <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                dexscreenerData?.mcap != null
+                  ? dexscreenerData.mcap >= 250000
+                    ? 'text-emerald-600'
+                    : 'text-red-600'
+                  : 'text-gray-500',
+              ]"
             >
               Market Cap
             </p>
             <p
               :class="[
-                'text-sm font-semibold mt-0.5',
-                (dexscreenerData?.mcap || 0) >= 250000
-                  ? 'text-emerald-600 font-bold'
+                'text-sm font-bold mt-0.5',
+                dexscreenerData?.mcap != null
+                  ? dexscreenerData.mcap >= 250000
+                    ? 'text-emerald-700'
+                    : 'text-red-700'
                   : 'text-gray-900',
               ]"
             >
-              {{
-                dexscreenerData?.mcap
-                  ? "$" +
-                    dexscreenerData.mcap.toLocaleString("en-US", {
-                      maximumFractionDigits: 0,
-                    })
-                  : "N/A"
-              }}
+              {{ formatCurrency(dexscreenerData?.mcap) }}
             </p>
           </div>
 
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <!-- Liquidity -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              dexscreenerData?.liquidity != null
+                ? dexscreenerData.liquidity >= 30000
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-gray-50 border-gray-200 text-gray-900',
+            ]"
+          >
             <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                dexscreenerData?.liquidity != null
+                  ? dexscreenerData.liquidity >= 30000
+                    ? 'text-emerald-600'
+                    : 'text-red-600'
+                  : 'text-gray-500',
+              ]"
             >
               Liquidity
             </p>
-            <p class="text-sm font-semibold text-gray-900 mt-0.5">
-              {{
-                dexscreenerData?.liquidity
-                  ? "$" +
-                    dexscreenerData.liquidity.toLocaleString("en-US", {
-                      maximumFractionDigits: 0,
-                    })
-                  : "N/A"
-              }}
+            <p
+              :class="[
+                'text-sm font-bold mt-0.5',
+                dexscreenerData?.liquidity != null
+                  ? dexscreenerData.liquidity >= 30000
+                    ? 'text-emerald-700'
+                    : 'text-red-700'
+                  : 'text-gray-900',
+              ]"
+            >
+              {{ formatCurrency(dexscreenerData?.liquidity) }}
             </p>
           </div>
 
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <!-- 24h Volume -->
+          <div
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              dexscreenerData?.volume24h != null
+                ? dexscreenerData.volume24h >= 1000000
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-gray-50 border-gray-200 text-gray-900',
+            ]"
+          >
             <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                dexscreenerData?.volume24h != null
+                  ? dexscreenerData.volume24h >= 1000000
+                    ? 'text-emerald-600'
+                    : 'text-red-600'
+                  : 'text-gray-500',
+              ]"
             >
               24h Volume
             </p>
             <p
               :class="[
-                'text-sm font-semibold mt-0.5',
-                (dexscreenerData?.volume24h || 0) >= 1000000
-                  ? 'text-emerald-600 font-bold'
+                'text-sm font-bold mt-0.5',
+                dexscreenerData?.volume24h != null
+                  ? dexscreenerData.volume24h >= 1000000
+                    ? 'text-emerald-700'
+                    : 'text-red-700'
                   : 'text-gray-900',
               ]"
             >
-              {{
-                dexscreenerData?.volume24h
-                  ? "$" +
-                    dexscreenerData.volume24h.toLocaleString("en-US", {
-                      maximumFractionDigits: 0,
-                    })
-                  : "N/A"
-              }}
+              {{ formatCurrency(dexscreenerData?.volume24h) }}
             </p>
           </div>
 
-          <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
+          <!-- DEX -->
+          <div
+            class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-900"
+          >
             <p
-              class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+              class="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
             >
               DEX
             </p>
-            <p class="text-sm font-semibold text-purple-600 mt-0.5 uppercase">
+            <p class="text-sm font-bold mt-0.5 uppercase text-purple-600">
               {{ dexscreenerData?.dexId || "N/A" }}
             </p>
           </div>
@@ -1884,14 +1973,37 @@ watch(
 
           <!-- Liquidity -->
           <div
-            class="p-3 bg-gray-50 rounded-xl border border-gray-200 text-gray-900"
+            :class="[
+              'p-3 rounded-xl border transition-colors',
+              jupiterData.liquidity != null
+                ? jupiterData.liquidity >= 30000
+                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                  : 'bg-red-50 border-red-200 text-red-700'
+                : 'bg-gray-50 border-gray-200 text-gray-900',
+            ]"
           >
             <p
-              class="text-[11px] font-semibold uppercase tracking-wider text-gray-500"
+              :class="[
+                'text-[11px] font-semibold uppercase tracking-wider',
+                jupiterData.liquidity != null
+                  ? jupiterData.liquidity >= 30000
+                    ? 'text-emerald-600'
+                    : 'text-red-600'
+                  : 'text-gray-500',
+              ]"
             >
               Liquidity
             </p>
-            <p class="text-sm font-bold mt-0.5">
+            <p
+              :class="[
+                'text-sm font-bold mt-0.5',
+                jupiterData.liquidity != null
+                  ? jupiterData.liquidity >= 30000
+                    ? 'text-emerald-700'
+                    : 'text-red-700'
+                  : 'text-gray-900',
+              ]"
+            >
               {{ formatCurrency(jupiterData.liquidity) }}
             </p>
           </div>
@@ -2106,7 +2218,7 @@ watch(
         v-if="geckoterminalData"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
       >
-        <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
             <img
               src="https://www.google.com/s2/favicons?domain=geckoterminal.com&sz=64"
@@ -2115,25 +2227,6 @@ watch(
             />
             GeckoTerminal Data
           </h2>
-
-          <div class="flex items-center gap-2">
-            <span
-              v-if="geckoterminalData.poolName"
-              class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-100 text-gray-700 border border-gray-200"
-            >
-              {{ geckoterminalData.poolName }}
-            </span>
-            <a
-              v-if="geckoterminalData.poolAddress"
-              :href="`https://www.geckoterminal.com/solana/pools/${geckoterminalData.poolAddress}`"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="inline-flex items-center gap-1 text-xs font-medium text-emerald-600 hover:text-emerald-700 hover:underline"
-            >
-              View on GeckoTerminal
-              <ExternalLink class="w-3.5 h-3.5" />
-            </a>
-          </div>
         </div>
 
         <!-- Main Metric: GT Score -->
@@ -2195,16 +2288,25 @@ watch(
 
         <!-- GT Security Detail & GT insightx Row (Colspan-6 each) -->
         <div
-          v-if="geckoterminalData.gtScoreDetails || geckoterminalData.insightxSecurityData"
+          v-if="
+            geckoterminalData.gtScoreDetails ||
+            geckoterminalData.insightxSecurityData
+          "
           class="pt-4 border-t border-gray-100 grid grid-cols-1 lg:grid-cols-12 gap-5"
         >
           <!-- GT Security Detail (colspan-6) -->
           <div
             v-if="geckoterminalData.gtScoreDetails"
-            :class="geckoterminalData.insightxSecurityData ? 'col-span-12 lg:col-span-6' : 'col-span-12'"
+            :class="
+              geckoterminalData.insightxSecurityData
+                ? 'col-span-12 lg:col-span-6'
+                : 'col-span-12'
+            "
             class="space-y-3"
           >
-            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+            <h3
+              class="text-sm font-bold text-gray-800 flex items-center gap-1.5"
+            >
               <ShieldCheck class="w-4 h-4 text-emerald-600" />
               GT Security Detail
             </h3>
@@ -2215,7 +2317,10 @@ watch(
                 :key="key"
                 :class="[
                   'p-3 rounded-xl border transition-colors flex flex-col justify-between',
-                  getScoreColorClass(geckoterminalData.gtScoreDetails[key], key),
+                  getScoreColorClass(
+                    geckoterminalData.gtScoreDetails[key],
+                    key,
+                  ),
                 ]"
               >
                 <div>
@@ -2233,7 +2338,9 @@ watch(
                     </p>
                   </div>
                   <p class="text-base font-extrabold mt-1">
-                    {{ formatScoreValue(geckoterminalData.gtScoreDetails[key]) }}
+                    {{
+                      formatScoreValue(geckoterminalData.gtScoreDetails[key])
+                    }}
                   </p>
                 </div>
                 <!-- Progress bar -->
@@ -2259,11 +2366,17 @@ watch(
 
           <!-- GT insightx (colspan-6) -->
           <div
-            v-if="geckoterminalData.insightxSecurityData"
-            :class="geckoterminalData.gtScoreDetails ? 'col-span-12 lg:col-span-6' : 'col-span-12'"
+            v-if="geckoterminalData.insightxSecurityData.length > 0"
+            :class="
+              geckoterminalData.gtScoreDetails
+                ? 'col-span-12 lg:col-span-6'
+                : 'col-span-12'
+            "
             class="space-y-3"
           >
-            <h3 class="text-sm font-bold text-gray-800 flex items-center gap-1.5">
+            <h3
+              class="text-sm font-bold text-gray-800 flex items-center gap-1.5"
+            >
               <ShieldAlert class="w-4 h-4 text-amber-500" />
               GT insightx
             </h3>
@@ -2274,11 +2387,17 @@ watch(
                 :key="key"
                 class="p-3 rounded-xl border border-gray-200 bg-gray-50 flex flex-col justify-between"
               >
-                <p class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                <p
+                  class="text-[11px] font-semibold text-gray-500 uppercase tracking-wider"
+                >
                   {{ formatInsightxLabel(key) }}
                 </p>
                 <p class="text-base font-extrabold text-gray-900 mt-1">
-                  {{ formatInsightxValue(geckoterminalData.insightxSecurityData[key]) }}
+                  {{
+                    formatInsightxValue(
+                      geckoterminalData.insightxSecurityData[key],
+                    )
+                  }}
                 </p>
               </div>
             </div>
@@ -2695,7 +2814,7 @@ watch(
         v-if="clobrData"
         class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
       >
-        <div class="flex items-center justify-between flex-wrap gap-2">
+        <div class="flex items-center flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
             <img
               src="https://www.google.com/s2/favicons?domain=clobr.io&sz=64"
@@ -2704,16 +2823,6 @@ watch(
             />
             Clobr Data
           </h2>
-          <a
-            v-if="submittedAddress"
-            :href="`https://clobr.io/token/${submittedAddress}`"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="text-xs font-semibold text-emerald-700 hover:text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 px-3 py-1.5 rounded-xl transition flex items-center gap-1.5"
-          >
-            <span>View on Clobr</span>
-            <ExternalLink class="w-3.5 h-3.5" />
-          </a>
         </div>
 
         <!-- Metrics Grid (Clobr Score) -->
@@ -2987,7 +3096,7 @@ watch(
             <div
               :class="[
                 'w-9 h-9 rounded-xl flex items-center justify-center font-bold',
-                solbundlerData.verdict === 'bundled'
+                solbundlerData.verdict === 'bundled' && !isBundlerAllExited
                   ? 'bg-red-50 text-red-600 border border-red-200'
                   : 'bg-emerald-50 text-emerald-600 border border-emerald-200',
               ]"
@@ -2999,27 +3108,21 @@ watch(
                 <h2 class="text-lg font-bold text-gray-900">
                   SolBundler Analysis
                 </h2>
-                <a
-                  href="https://solbundler.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  class="text-xs text-gray-400 hover:text-indigo-600 transition flex items-center gap-1 font-medium"
-                  title="Visit SolBundler"
-                >
-                  solbundler.app
-                  <ExternalLink class="w-3 h-3" />
-                </a>
               </div>
-              <p class="text-xs text-gray-500">
-                Genesis token sniper bundle detection & supply control tracking
-              </p>
             </div>
           </div>
 
           <!-- Verdict Badge -->
           <div>
             <div
-              v-if="solbundlerData.verdict === 'bundled'"
+              v-if="solbundlerData.verdict === 'bundled' && isBundlerAllExited"
+              class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-xs"
+            >
+              <CheckCircle2 class="w-4 h-4 text-emerald-600" />
+              <span>SAFE (ALL EXITED)</span>
+            </div>
+            <div
+              v-else-if="solbundlerData.verdict === 'bundled'"
               class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold bg-red-100 text-red-800 border border-red-300 shadow-xs"
             >
               <AlertTriangle class="w-4 h-4 text-red-600" />
@@ -3040,63 +3143,6 @@ watch(
                 (solbundlerData.verdict || "UNKNOWN").toUpperCase()
               }}</span>
             </div>
-          </div>
-        </div>
-
-        <!-- Verdict Banner Notice -->
-        <div
-          :class="[
-            'p-3.5 rounded-xl border text-xs flex items-start gap-3',
-            solbundlerData.verdict === 'bundled'
-              ? 'bg-red-50/80 border-red-200 text-red-900'
-              : 'bg-emerald-50/80 border-emerald-200 text-emerald-900',
-          ]"
-        >
-          <div class="mt-0.5 shrink-0">
-            <ShieldAlert
-              v-if="solbundlerData.verdict === 'bundled'"
-              class="w-4 h-4 text-red-600"
-            />
-            <ShieldCheck v-else class="w-4 h-4 text-emerald-600" />
-          </div>
-          <div class="flex-1 leading-relaxed">
-            <span v-if="solbundlerData.verdict === 'bundled'">
-              <strong>High Bundle Concentration:</strong>
-              SolBundler detected
-              <strong
-                >{{ solbundlerData.bundle?.walletCount || 0 }} bundled
-                wallets</strong
-              >
-              that acquired
-              <strong class="font-bold underline decoration-red-400">
-                {{ formatPercent(solbundlerData.bundle?.percentOfSupply) }}
-              </strong>
-              of the supply ({{
-                formatCompactNumber(solbundlerData.bundle?.tokensBought)
-              }}
-              tokens) spending
-              {{ Number(solbundlerData.bundle?.solSpent || 0).toFixed(3) }} SOL
-              in the genesis block.
-              <span
-                v-if="(solbundlerData.exitStatus?.stillHolding || 0) > 0"
-                class="text-red-700 font-semibold block mt-1"
-              >
-                ⚠️ {{ solbundlerData.exitStatus.stillHolding }} bundled
-                wallet(s) are still holding supply!
-              </span>
-              <span v-else class="text-gray-600 block mt-1">
-                ✓ All analyzed bundle wallets have fully sold (0 still holding).
-              </span>
-            </span>
-            <span v-else>
-              <strong>Clean Genesis Creation:</strong>
-              No significant coordinated multi-wallet bundling detected at
-              launch. Total bundle wallet count is
-              {{ solbundlerData.bundle?.walletCount || 0 }} ({{
-                formatPercent(solbundlerData.bundle?.percentOfSupply)
-              }}
-              of supply).
-            </span>
           </div>
         </div>
 
@@ -3194,11 +3240,19 @@ watch(
                 : 'bg-emerald-50 border-emerald-200 text-emerald-800',
             ]"
           >
-            <p
-              class="text-[11px] font-semibold uppercase tracking-wider opacity-80"
-            >
-              Exit Status
-            </p>
+            <div class="flex items-center justify-between">
+              <p
+                class="text-[11px] font-semibold uppercase tracking-wider opacity-80"
+              >
+                Exit Status
+              </p>
+              <span
+                v-if="isBundlerAllExited"
+                class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-200/70 text-emerald-800 border border-emerald-300 uppercase tracking-wider"
+              >
+                Safe
+              </span>
+            </div>
             <div class="flex items-baseline gap-1 mt-1">
               <p class="text-xl font-bold">
                 {{ solbundlerData.exitStatus?.stillHolding || 0 }}
@@ -3214,164 +3268,184 @@ watch(
               {{
                 (solbundlerData.exitStatus?.stillHolding || 0) > 0
                   ? "Dumping risk remaining"
-                  : "100% bundle exited"
+                  : "100% bundle exited (Safe)"
               }}
             </p>
           </div>
         </div>
 
-        <!-- Wallets Breakdown Table -->
+        <!-- Wallets Breakdown Table (Collapsible) -->
         <div
           v-if="solbundlerData.wallets && solbundlerData.wallets.length > 0"
           class="space-y-2 pt-1"
         >
-          <div class="flex items-center justify-between">
-            <h3
-              class="text-xs font-bold text-gray-700 uppercase tracking-wider flex items-center gap-1.5"
-            >
-              <Users class="w-3.5 h-3.5 text-gray-500" />
-              Bundled Wallets Breakdown ({{ solbundlerData.wallets.length }})
-            </h3>
-            <span class="text-[11px] text-gray-500">
-              Sorted by bundle participation
-            </span>
-          </div>
+          <button
+            type="button"
+            @click="isBundledWalletsOpen = !isBundledWalletsOpen"
+            class="w-full flex items-center justify-between p-3 rounded-xl border border-gray-200 bg-gray-50 hover:bg-gray-100/80 transition-colors cursor-pointer text-left focus:outline-none"
+          >
+            <div class="flex items-center gap-2">
+              <Users class="w-4 h-4 text-gray-600" />
+              <span
+                class="text-xs font-bold text-gray-800 uppercase tracking-wider"
+              >
+                Bundled Wallets Breakdown ({{ solbundlerData.wallets.length }})
+              </span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-[11px] font-medium text-gray-500">
+                {{ isBundledWalletsOpen ? "Hide Breakdown" : "Show Breakdown" }}
+              </span>
+              <ChevronDown
+                class="w-4 h-4 text-gray-500 transition-transform duration-200"
+                :class="{ 'rotate-180': isBundledWalletsOpen }"
+              />
+            </div>
+          </button>
 
-          <div class="overflow-x-auto rounded-xl border border-gray-200">
-            <table class="w-full text-left border-collapse min-w-[680px]">
-              <thead>
-                <tr
-                  class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none"
-                >
-                  <th class="py-2.5 px-3 w-10 text-center">#</th>
-                  <th class="py-2.5 px-3">Wallet Address</th>
-                  <th class="py-2.5 px-3 text-right">Tokens Bought</th>
-                  <th class="py-2.5 px-3 text-right">% of Supply</th>
-                  <th class="py-2.5 px-3 text-right">SOL Spent</th>
-                  <th class="py-2.5 px-3 text-center">Sold Status</th>
-                  <th class="py-2.5 px-3 text-center w-24">Explorer</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-100 text-xs">
-                <tr
-                  v-for="(w, idx) in solbundlerData.wallets"
-                  :key="w.address || idx"
-                  class="hover:bg-gray-50/80 transition-colors"
-                >
-                  <td
-                    class="py-2.5 px-3 text-center font-bold text-gray-400 text-[11px]"
+          <div v-show="isBundledWalletsOpen" class="space-y-2">
+            <div class="flex items-center justify-between px-1">
+              <span class="text-[11px] text-gray-500">
+                Sorted by bundle participation
+              </span>
+            </div>
+
+            <div class="overflow-x-auto rounded-xl border border-gray-200">
+              <table class="w-full text-left border-collapse min-w-[680px]">
+                <thead>
+                  <tr
+                    class="bg-gray-50 border-b border-gray-200 text-[11px] font-bold text-gray-500 uppercase tracking-wider select-none"
                   >
-                    {{ idx + 1 }}
-                  </td>
-                  <td class="py-2.5 px-3 font-mono text-gray-700">
-                    <div class="flex items-center gap-1.5">
-                      <span
-                        >{{ w.address.slice(0, 4) }}...{{
-                          w.address.slice(-4)
-                        }}</span
-                      >
-                      <button
-                        type="button"
-                        @click="copy(w.address)"
-                        class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
-                        :title="
-                          copied && copiedText === w.address
-                            ? 'Copied!'
-                            : 'Copy Address'
-                        "
-                      >
-                        <Check
-                          v-if="copied && copiedText === w.address"
-                          class="w-3.5 h-3.5 text-emerald-600"
-                        />
-                        <Copy v-else class="w-3.5 h-3.5" />
-                      </button>
-                      <span
-                        v-if="copied && copiedText === w.address"
-                        class="text-[10px] text-emerald-600 font-medium select-none"
-                      >
-                        Copied!
-                      </span>
-                    </div>
-                  </td>
-                  <td
-                    class="py-2.5 px-3 text-right font-mono font-medium text-gray-800"
+                    <th class="py-2.5 px-3 w-10 text-center">#</th>
+                    <th class="py-2.5 px-3">Wallet Address</th>
+                    <th class="py-2.5 px-3 text-right">Tokens Bought</th>
+                    <th class="py-2.5 px-3 text-right">% of Supply</th>
+                    <th class="py-2.5 px-3 text-right">SOL Spent</th>
+                    <th class="py-2.5 px-3 text-center">Sold Status</th>
+                    <th class="py-2.5 px-3 text-center w-24">Explorer</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 text-xs">
+                  <tr
+                    v-for="(w, idx) in solbundlerData.wallets"
+                    :key="w.address || idx"
+                    class="hover:bg-gray-50/80 transition-colors"
                   >
-                    {{ formatCompactNumber(w.boughtTokens) }}
-                  </td>
-                  <td class="py-2.5 px-3 text-right font-mono font-semibold">
-                    <div class="flex items-center justify-end gap-1.5">
-                      <div
-                        class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden"
-                      >
-                        <div
-                          class="h-full rounded-full"
-                          :class="
-                            (w.percentOfSupply || 0) >= 10
-                              ? 'bg-red-500'
-                              : (w.percentOfSupply || 0) >= 3
-                                ? 'bg-amber-500'
-                                : 'bg-blue-500'
+                    <td
+                      class="py-2.5 px-3 text-center font-bold text-gray-400 text-[11px]"
+                    >
+                      {{ idx + 1 }}
+                    </td>
+                    <td class="py-2.5 px-3 font-mono text-gray-700">
+                      <div class="flex items-center gap-1.5">
+                        <span
+                          >{{ w.address.slice(0, 4) }}...{{
+                            w.address.slice(-4)
+                          }}</span
+                        >
+                        <button
+                          type="button"
+                          @click="copy(w.address)"
+                          class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
+                          :title="
+                            copied && copiedText === w.address
+                              ? 'Copied!'
+                              : 'Copy Address'
                           "
-                          :style="{
-                            width: `${Math.min(100, (w.percentOfSupply || 0) * 4)}%`,
-                          }"
-                        ></div>
+                        >
+                          <Check
+                            v-if="copied && copiedText === w.address"
+                            class="w-3.5 h-3.5 text-emerald-600"
+                          />
+                          <Copy v-else class="w-3.5 h-3.5" />
+                        </button>
+                        <span
+                          v-if="copied && copiedText === w.address"
+                          class="text-[10px] text-emerald-600 font-medium select-none"
+                        >
+                          Copied!
+                        </span>
                       </div>
-                      <span>{{ formatPercent(w.percentOfSupply) }}</span>
-                    </div>
-                  </td>
-                  <td class="py-2.5 px-3 text-right font-mono text-gray-600">
-                    {{ Number(w.solSpent || 0).toFixed(3) }} SOL
-                  </td>
-                  <td class="py-2.5 px-3 text-center">
-                    <span
-                      v-if="w.soldPercent >= 100"
-                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200"
+                    </td>
+                    <td
+                      class="py-2.5 px-3 text-right font-mono font-medium text-gray-800"
                     >
-                      100% Sold
-                    </span>
-                    <span
-                      v-else-if="
-                        w.stillHolding > 0 || (w.soldPercent || 0) < 100
-                      "
-                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
-                    >
-                      Holding ({{ (100 - (w.soldPercent || 0)).toFixed(0) }}%
-                      left)
-                    </span>
-                    <span
-                      v-else
-                      class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600"
-                    >
-                      {{ w.soldPercent }}% Sold
-                    </span>
-                  </td>
-                  <td class="py-2.5 px-3 text-center">
-                    <div class="flex items-center justify-center gap-1.5">
-                      <a
-                        :href="`https://solscan.io/account/${w.address}`"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-gray-400 hover:text-indigo-600 transition p-1 hover:bg-gray-100 rounded"
-                        title="View on Solscan"
+                      {{ formatCompactNumber(w.boughtTokens) }}
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono font-semibold">
+                      <div class="flex items-center justify-end gap-1.5">
+                        <div
+                          class="w-12 bg-gray-100 rounded-full h-1.5 overflow-hidden"
+                        >
+                          <div
+                            class="h-full rounded-full"
+                            :class="
+                              (w.percentOfSupply || 0) >= 10
+                                ? 'bg-red-500'
+                                : (w.percentOfSupply || 0) >= 3
+                                  ? 'bg-amber-500'
+                                  : 'bg-blue-500'
+                            "
+                            :style="{
+                              width: `${Math.min(100, (w.percentOfSupply || 0) * 4)}%`,
+                            }"
+                          ></div>
+                        </div>
+                        <span>{{ formatPercent(w.percentOfSupply) }}</span>
+                      </div>
+                    </td>
+                    <td class="py-2.5 px-3 text-right font-mono text-gray-600">
+                      {{ Number(w.solSpent || 0).toFixed(3) }} SOL
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      <span
+                        v-if="w.soldPercent >= 100"
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-700 border border-gray-200"
                       >
-                        <ExternalLink class="w-3.5 h-3.5" />
-                      </a>
-                      <a
-                        :href="`https://gmgn.ai/sol/address/${w.address}`"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        class="text-[10px] font-bold text-gray-500 hover:text-emerald-600 transition px-1 py-0.5 hover:bg-gray-100 rounded border border-gray-200"
-                        title="View on GMGN"
+                        100% Sold
+                      </span>
+                      <span
+                        v-else-if="
+                          w.stillHolding > 0 || (w.soldPercent || 0) < 100
+                        "
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200"
                       >
-                        GMGN
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                        Holding ({{ (100 - (w.soldPercent || 0)).toFixed(0) }}%
+                        left)
+                      </span>
+                      <span
+                        v-else
+                        class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-gray-100 text-gray-600"
+                      >
+                        {{ w.soldPercent }}% Sold
+                      </span>
+                    </td>
+                    <td class="py-2.5 px-3 text-center">
+                      <div class="flex items-center justify-center gap-1.5">
+                        <a
+                          :href="`https://solscan.io/account/${w.address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-gray-400 hover:text-indigo-600 transition p-1 hover:bg-gray-100 rounded"
+                          title="View on Solscan"
+                        >
+                          <ExternalLink class="w-3.5 h-3.5" />
+                        </a>
+                        <a
+                          :href="`https://gmgn.ai/sol/address/${w.address}`"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="text-[10px] font-bold text-gray-500 hover:text-emerald-600 transition px-1 py-0.5 hover:bg-gray-100 rounded border border-gray-200"
+                          title="View on GMGN"
+                        >
+                          GMGN
+                        </a>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
 
@@ -3687,6 +3761,45 @@ watch(
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- External Tools Card (Positioned at bottom of page) -->
+      <div
+        v-if="externalRedirectLinks.length"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-3"
+      >
+        <div class="flex items-center justify-between flex-wrap gap-2">
+          <h2 class="text-base font-bold text-gray-900 flex items-center gap-2">
+            <ExternalLink class="w-5 h-5 text-blue-600" />
+            <span>External Tools</span>
+          </h2>
+          <span class="text-xs text-gray-500">
+            Quick links to external scanners and analytics for this token
+          </span>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5 pt-1">
+          <a
+            v-for="tool in externalRedirectLinks"
+            :key="tool.id"
+            :href="tool.url"
+            target="_blank"
+            rel="noopener noreferrer"
+            :class="[
+              'inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold border transition shadow-2xs hover:shadow-xs',
+              tool.bgClass,
+            ]"
+            :title="tool.name"
+          >
+            <img
+              :src="tool.icon"
+              :alt="tool.name"
+              class="w-4 h-4 rounded-xs object-contain"
+            />
+            <span>{{ tool.name }}</span>
+            <ExternalLink class="w-3.5 h-3.5 opacity-60" />
+          </a>
         </div>
       </div>
     </div>
