@@ -1260,7 +1260,7 @@ watch(
 
 <template>
   <div class="bg-gray-100 p-3 md:p-5 min-h-screen">
-    <div class="w-full max-w-[1700px] mx-auto space-y-5">
+    <div class="w-full max-w-[1700px] mx-auto space-y-2">
       <!-- Top Search & Navigation Bar (No outer card wrapper) -->
       <div
         class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4"
@@ -1325,7 +1325,7 @@ watch(
       <!-- Token Header & TradingView Chart Combined Card -->
       <div
         v-if="tokenMeta || dexscreenerData || submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <!-- Token Header (Image, Name & Symbol + Website/Socials on far right) -->
         <div class="flex items-center justify-between gap-3 flex-wrap">
@@ -1620,7 +1620,7 @@ watch(
       <!-- Dexscreener Data Card (Market Cap, Liquidity, 24h Volume, DEX) -->
       <div
         v-if="dexscreenerData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -1768,7 +1768,7 @@ watch(
       <!-- Jupiter Data Card (Positioned above Meteora Data) -->
       <div
         v-if="jupiterData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -2216,7 +2216,7 @@ watch(
       <!-- GeckoTerminal Data Card (Positioned below Jupiter Card) -->
       <div
         v-if="geckoterminalData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -2408,7 +2408,7 @@ watch(
       <!-- Smart Wallet List Card -->
       <div
         v-if="submittedAddress"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -2589,7 +2589,7 @@ watch(
       <!-- Meteora Data Card (Positioned above Rugcheck Data) -->
       <div
         v-if="meteoraData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -2812,7 +2812,7 @@ watch(
       <!-- Clobr Data Card (Positioned below Meteora Data) -->
       <div
         v-if="clobrData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -2902,7 +2902,7 @@ watch(
       <!-- Mobula Data Card (Positioned below Meteora Data) -->
       <div
         v-if="mobulaData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <div class="flex items-center justify-between flex-wrap gap-2">
           <h2 class="text-lg font-bold text-gray-900 flex items-center gap-2">
@@ -3088,7 +3088,7 @@ watch(
       <!-- SolBundler Data Card (Positioned below Rugcheck Data) -->
       <div
         v-if="solbundlerData"
-        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-4"
+        class="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm space-y-1"
       >
         <!-- Card Header -->
         <div class="flex items-center justify-between flex-wrap gap-3">
@@ -3628,7 +3628,26 @@ watch(
               >
                 <!-- Name -->
                 <td class="py-3 px-4 font-semibold text-gray-900">
-                  {{ pool.name || "Unknown" }}
+                  <div class="flex items-center gap-1.5">
+                    <span>{{ pool.name || "Unknown" }}</span>
+                    <button
+                      v-if="pool.pool_address"
+                      type="button"
+                      @click.stop="copy(pool.pool_address)"
+                      class="text-gray-400 hover:text-gray-600 p-0.5 rounded hover:bg-gray-100 transition cursor-pointer"
+                      :title="
+                        copied && copiedText === pool.pool_address
+                          ? 'Copied!'
+                          : 'Copy Pool Address'
+                      "
+                    >
+                      <Check
+                        v-if="copied && copiedText === pool.pool_address"
+                        class="w-3.5 h-3.5 text-emerald-600"
+                      />
+                      <Copy v-else class="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </td>
 
                 <!-- Base Fee -->
